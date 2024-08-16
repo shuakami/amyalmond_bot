@@ -1,0 +1,4 @@
+botpy
+watchdog
+requests
+pyyaml
