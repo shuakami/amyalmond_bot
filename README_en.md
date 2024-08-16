@@ -492,11 +492,11 @@ AmyAlmond follows the [MPL2 License](LICENSE). You are free to use, modify, and 
 
 This project is intended for educational and research purposes only. The developers are not responsible for any consequences resulting from the use of this project. When using this project, please ensure compliance with relevant laws and regulations and respect the intellectual property rights of others.
 
-To help users better understand the future direction of the project and encourage them to get involved (for example, by submitting issues to suggest or request new features), we can add a detailed roadmap in the documentation and notify users that they can propose new features by submitting issues.
-
 ## Roadmap
 
 We are actively developing and expanding the features of the AmyAlmond chatbot.
+
+The following are some features planned for future versions. You can also suggest new features or improvements to existing features by submitting issues.
 
 | Feature Description             | Expected Version   | Status    | Description                          |
 |------------------|--------|-------|-------------------------------------|
