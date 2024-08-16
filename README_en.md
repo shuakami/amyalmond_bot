@@ -30,9 +30,9 @@ By leveraging the LLM API, AmyAlmond provides context-aware smart replies, enhan
 - 🪝 **Detailed logs and code comments** for easy debugging and monitoring.
 
 ## Want to See It in Action?
-[Preview Image-1](dist/img/QQ_hKn8basp3c.png)
-[Preview Image-2](dist/img/QQ_yMBfUB61Cf.png)
-[Preview Image-3](dist/img/QQ_pYuUYL5iDA.png)
+![Preview Image-1](dist/img/QQ_hKn8basp3c.png)
+![Preview Image-2](dist/img/QQ_yMBfUB61Cf.png)
+![Preview Image-3](dist/img/QQ_pYuUYL5iDA.png)
 
 ## Getting Started
 
@@ -119,7 +119,7 @@ Here is the translation of the provided Chinese document into English using Mark
 The QQ bot requires registration and configuration through the QQ Developer Platform to obtain an `AppID` and `AppSecret`. Here are the detailed steps:
 
 1. **Register a QQ Developer Account**
-   - Visit the [QQ Developer Platform](https://open.qq.com/) and log in with your QQ account.
+   - Visit the [QQ Developer Platform](https://q.qq.com/ and log in with your QQ account.
    - If you do not have a developer account, follow the instructions to complete the developer verification.
 
 2. **Create an Application**
