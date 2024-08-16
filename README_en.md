@@ -498,8 +498,6 @@ To help users better understand the future direction of the project and encourag
 
 We are actively developing and expanding the features of the AmyAlmond chatbot.
 
-The following are some features planned for future versions. You can also suggest new features or improvements to existing features by submitting issues.
-
 | Feature Description             | Expected Version   | Status    | Description                          |
 |------------------|--------|-------|-------------------------------------|
 | **Refactoring and Modular Design**   | v1.1.0 | Planning  | -                           |
