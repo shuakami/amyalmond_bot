@@ -1,4 +1,4 @@
-botpy
+qq-botpy
 watchdog
 requests
 pyyaml
