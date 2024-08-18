@@ -7,7 +7,7 @@ on:
     types: [opened]
 
 jobs:
-  detect-language-and-reply:
+  labeler:
     runs-on: ubuntu-latest
     permissions: write-all
     env:
