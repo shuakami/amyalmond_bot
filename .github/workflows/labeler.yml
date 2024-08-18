@@ -24,4 +24,4 @@ jobs:
       - name: Run auto labeler script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python auto_labeler.py
+        run: python .github/workflows/auto_labeler.py
