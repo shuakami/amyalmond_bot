@@ -186,7 +186,7 @@ appid: "1234567890abcdef"
 secret: "abcdef1234567890abcdef1234567890"
 openai_secret: "sk-abcdef1234567890abcdef1234567890"
 openai_model: "gpt-4o-mini"
-openai_api_url: "https://api.openai.com/v1/chat/completions"
+openai_api_url: "https://api.openai-hk.com/v1/chat/completions"
 admin_id: "4842941B3A42C08B331CEB3DD464"
 ```
 
@@ -398,7 +398,7 @@ amyalmond_bot/
     secret: "你的QQ机器人开发AppSecret"
     openai_secret: "Openai API密钥"
     openai_model: "gpt-4o-mini"
-    openai_api_url: "https://api.openai.com/v1/chat/completions"
+    openai_api_url: "https://api.openai-hk.com/v1/chat/completions"
     admin_id: "你的识别码"
     ```
 
