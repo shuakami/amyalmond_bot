@@ -498,16 +498,17 @@ We are actively developing and expanding the features of the AmyAlmond chatbot.
 
 The following are some features planned for future versions. You can also suggest new features or improvements to existing features by submitting issues.
 
-> **[NEW]** Modularization and Refactoring
+
+> **[NEW]** Modularization and Refactoring 
 > - **Target Version**: v1.1.0
-> - **Start Date**: 2024/08/16
-> - **Expected Completion Date**: 2024/10/?
-> - **Status**: Creating folders...
-> - **Description**: Starting the refactoring process to support modular design, improving maintainability.
+> - **Start Date**: 2024/08/16  
+> - **Expected Completion Date**: 2024/08/20
+> - **Status**: Completed, testing in progress
+> - **Description**: Started refactoring the project to support modular design and improve maintainability.
 
 | Feature Description             | Expected Version   | Status    | Description                          |
-|------------------|--------|-------|-------------------------------------|
-| **Refactoring and Modular Design**   | v1.1.0 | In Progress  | -                           |
+|--------------------------------|-------------------|-----------|--------------------------------------|
+| **Refactoring and Modular Design**   | v1.1.0 | Testing  | -                           |
 | **Integration with GPT-SoVITS** | v1.2.0 | Planning  | Give the bot voice output capabilities                  |
 | **Group Chat Statistics and Analysis**       | v1.3.0 | Planning  | Provide statistics and analysis reports for group chats              |
 | **Support for Viewing Images**       | v1.4.0 | Planning  | Support sending images by users and responding to them                 |
