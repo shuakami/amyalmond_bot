@@ -6,7 +6,7 @@
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
   [![GitHub Stars](https://img.shields.io/github/stars/shuakami/amyalmond_bot.svg)](https://github.com/shuakami/amyalmond_bot/stargazers)
   [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/shuakami/amyalmond_bot)
-  [![Version](https://img.shields.io/badge/version-1.0.0_(Beta_815001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
+  [![Version](https://img.shields.io/badge/version-1.1.2_(Stable_818005)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
 
   English | [Simplified Chinese](README.md)
 

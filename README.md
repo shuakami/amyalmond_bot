@@ -6,7 +6,7 @@
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
   [![GitHub Stars](https://img.shields.io/github/stars/shuakami/amyalmond_bot.svg)](https://github.com/shuakami/amyalmond_bot/stargazers)
   [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/shuakami/amyalmond_bot)
-  [![Version](https://img.shields.io/badge/version-1.1.2_(Beta_818003)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
+  [![Version](https://img.shields.io/badge/version-1.1.2_(Stable_818005)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
 
   [English](README_en.md) | 简体中文
 
@@ -15,7 +15,7 @@
   [功能特性](#功能特性) • [快速开始](#快速开始) • [使用指南](#使用指南) • [开发与贡献](#开发与贡献) • [许可证](#许可证)
 </div>
 
->开发版未经测试，请谨慎使用
+
 
 
 ## 功能特性
