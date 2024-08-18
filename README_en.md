@@ -6,7 +6,7 @@
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
   [![GitHub Stars](https://img.shields.io/github/stars/shuakami/amyalmond_bot.svg)](https://github.com/shuakami/amyalmond_bot/stargazers)
   [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/shuakami/amyalmond_bot)
-  [![Version](https://img.shields.io/badge/version-1.0.0_(Beta_815001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
+  [![Version](https://img.shields.io/badge/version-1.1.2_(Stable_818005)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
 
   English | [Simplified Chinese](README.md)
 
@@ -14,6 +14,10 @@
   
   [Features](#features) • [Getting Started](#getting-started) • [Usage Guide](#usage-guide) • [Development and Contributions](#development-and-contributions) • [License](#license)
 </div>
+
+> 此英文文档等待翻译（我一个人实在是忙不过来了），如需查看最新版本请前往[Simplified Chinese](README.md)
+
+> this English document is waiting to be translated (I really can't keep up with it alone), please go to [Simplified Chinese](README.md) to view the latest version
 
 ## Features
 
