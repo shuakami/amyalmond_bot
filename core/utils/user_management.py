@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - user_management.py
+AmyAlmond Project - core/utils/user_management.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>

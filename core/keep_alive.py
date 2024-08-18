@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - keep_alive.py
+AmyAlmond Project - core/keep_alive.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>

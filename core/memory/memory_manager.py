@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - memory_manager.py
+AmyAlmond Project - core/memory/memory_manager.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>

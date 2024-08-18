@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - file_handler.py
+AmyAlmond Project - core/utils/file_handler.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>

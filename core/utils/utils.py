@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - utils.py
+AmyAlmond Project - core/utils/utils.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>

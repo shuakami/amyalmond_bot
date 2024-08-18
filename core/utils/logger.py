@@ -1,5 +1,5 @@
 """
-AmyAlmond Project - logger.py
+AmyAlmond Project - core/utils/logger.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
