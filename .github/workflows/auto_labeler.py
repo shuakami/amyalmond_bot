@@ -61,6 +61,24 @@ for issue in issues:
     # 解析 LLM 返回的标签
     labels = [label.strip() for label in result['choices'][0]['message']['content'].split(',')]
 
-    # 为 Issue 添加标签
-    issue.add_to_labels(*labels)
-    print(f"已为 Issue #{issue.number} 添加标签: {labels}")
+    # 调试信息
+    print(f"原始返回的标签: {result['choices'][0]['message']['content']}")
+    print(f"解析后的标签: {labels}")
+
+    # 确保标签合法
+    valid_labels = [label for label in labels if label in [
+        'bot', 'blocked', 'bot-core', 'bug', 'discussion', 'documentation', 'duplicate', 'enhancement', 'good-first-issue',
+        'in-progress', 'memory-module', 'new-feature', 'on-hold', 'plugin-system', 'priority-high', 'priority-low',
+        'priority-medium', 'question', 'refactor', 'stubborn-bug', 'urgent-bug', 'wontfix'
+    ]]
+
+    if valid_labels:
+        # 逐个添加标签
+        for label in valid_labels:
+            try:
+                issue.add_to_labels(label)
+                print(f"已为 Issue #{issue.number} 添加标签: {label}")
+            except Exception as e:
+                print(f"添加标签 {label} 失败: {e}")
+    else:
+        print(f"未添加任何标签到 Issue #{issue.number}")
