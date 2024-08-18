@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/18 10:35
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Beta_818003)
+Version: 1.1.2 (Stable_818005)
 
 config.py - 配置文件读取与验证
 """

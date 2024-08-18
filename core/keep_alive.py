@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/18 16:24
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Beta_818003)
+Version: 1.1.2 (Stable_818005)
 
 keep_alive.py 包含 Keep-Alive 机制的实现,用于监控 API 的连接状态。
 """
@@ -18,7 +18,7 @@ from config import OPENAI_SECRET, OPENAI_API_URL, OPENAI_KEEP_ALIVE, UPDATE_KEEP
 
 _log = get_logger()
 
-CURRENT_VERSION = "1.1.2 (Beta_818003)"
+CURRENT_VERSION = "1.1.2 (Release_818003)"
 GITHUB_REPO = "shuakami/amyalmond_bot"
 
 PRIMARY_API_URL = "https://api.amyalmond.mrsunny.top/api/github-status"
