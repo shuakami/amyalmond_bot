@@ -5,13 +5,16 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/18 10:35
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.0 (Alpha_817002)
+Version: 1.1.2 (Beta_818003)
 
 config.py - 配置文件读取与验证
 """
 import os
 from botpy.ext.cog_yaml import read
-from logger import _log
+from core.utils.logger import get_logger
+
+# 获取 logger 对象
+logger = get_logger()
 
 # 定义目录结构
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,13 +47,13 @@ if os.path.exists(CONFIG_FILE):
         test_config.update(loaded_config)
     else:
         print(f"")
-        _log.critical(f"配置文件为空: {CONFIG_FILE}")
-        _log.critical(f"请检查配置文件是否正确填写，并确保其格式为 YAML")
+        logger.critical(f"配置文件为空: {CONFIG_FILE}")
+        logger.critical(f"请检查配置文件是否正确填写，并确保其格式为 YAML")
         exit(1)
 else:
     print(f"")
-    _log.critical(f"找不到配置文件: {CONFIG_FILE}")
-    _log.critical(f"请确保在 {CONFIG_DIR} 目录下存在 config.yaml 文件")
+    logger.critical(f"找不到配置文件: {CONFIG_FILE}")
+    logger.critical(f"请确保在 {CONFIG_DIR} 目录下存在 config.yaml 文件")
     exit(1)
 
 # 配置参数
@@ -60,19 +63,23 @@ OPENAI_MODEL = test_config.get("openai_model", "gpt-4o-mini")
 OPENAI_API_URL = test_config.get("openai_api_url", "https://api.openai-hk.com/v1/chat/completions")
 ADMIN_ID = test_config.get("admin_id", "")
 
+# KEEP_ALIVE 配置
+OPENAI_KEEP_ALIVE = test_config.get("openai_keep_alive", True)
+UPDATE_KEEP_ALIVE = test_config.get("update_keep_alive", True)
+
 # 日志配置
 LOG_LEVEL = test_config.get("log_level", "INFO").upper()
 DEBUG_MODE = test_config.get("debug", False)
 
 # 验证关键配置
 if not OPENAI_SECRET:
-    _log.warning("OpenAI API 密钥缺失,请检查 config.yaml 文件")
+    logger.warning("OpenAI API 密钥缺失,请检查 config.yaml 文件")
 if not OPENAI_MODEL:
-    _log.warning("OpenAI 模型缺失,请检查 config.yaml 文件")
+    logger.warning("OpenAI 模型缺失,请检查 config.yaml 文件")
 if not OPENAI_API_URL:
-    _log.warning("OpenAI API URL 缺失,请检查 config.yaml 文件")
+    logger.warning("OpenAI API URL 缺失,请检查 config.yaml 文件")
 if not ADMIN_ID:
-    _log.warning("管理员 ID 缺失,请检查 config.yaml 文件")
+    logger.warning("管理员 ID 缺失,请检查 config.yaml 文件")
 
 # DEBUG情况下
 if DEBUG_MODE:
@@ -80,9 +87,9 @@ if DEBUG_MODE:
         masked_secret = '*' * (len(OPENAI_SECRET) - 4) + OPENAI_SECRET[-4:]
         masked_admin_id = '*' * (len(ADMIN_ID) - 4) + ADMIN_ID[-4:]
         print("")
-        _log.debug(f"OpenAI API 密钥: {masked_secret}")
-        _log.debug(f"OpenAI 模型: {OPENAI_MODEL}")
-        _log.debug(f"OpenAI API URL: {OPENAI_API_URL}")
-        _log.debug(f"管理员 ID: {masked_admin_id}")
-    _log.debug(f"日志级别: {LOG_LEVEL}")
-    _log.debug(f"调试模式: 已启用")
+        logger.debug(f"OpenAI API 密钥: {masked_secret}")
+        logger.debug(f"OpenAI 模型: {OPENAI_MODEL}")
+        logger.debug(f"OpenAI API URL: {OPENAI_API_URL}")
+        logger.debug(f"管理员 ID: {masked_admin_id}")
+    logger.debug(f"日志级别: {LOG_LEVEL}")
+    logger.debug(f"调试模式: 已启用")

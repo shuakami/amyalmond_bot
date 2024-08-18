@@ -3,21 +3,22 @@ AmyAlmond Project - keep_alive.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/18 14:00
+Last Edited: 2024/8/18 16:24
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.0 (Alpha_817001)
+Version: 1.1.2 (Beta_818003)
 
 keep_alive.py 包含 Keep-Alive 机制的实现,用于监控 API 的连接状态。
 """
 
 import asyncio
 import aiohttp
-from logger import get_logger
-from version_utils import is_newer_version
+from core.utils.logger import get_logger
+from core.utils.version_utils import is_newer_version
+from config import OPENAI_SECRET, OPENAI_API_URL, OPENAI_KEEP_ALIVE, UPDATE_KEEP_ALIVE
 
 _log = get_logger()
 
-CURRENT_VERSION = "1.1.0 (Alpha_817001)"
+CURRENT_VERSION = "1.1.2 (Beta_818003)"
 GITHUB_REPO = "shuakami/amyalmond_bot"
 
 PRIMARY_API_URL = "https://api.amyalmond.mrsunny.top/api/github-status"
@@ -75,6 +76,10 @@ async def check_for_updates():
     """
     检查是否有新版本可用，并根据版本类型（正式版或开发版）提醒用户更新。
     """
+    if not UPDATE_KEEP_ALIVE:
+        _log.warning("更新检查已关闭，建议打开以获取最新功能和修复~")
+        return
+
     version_info_list = await get_latest_version()
 
     if version_info_list:
@@ -108,7 +113,7 @@ async def check_for_updates():
         _log.warning("无法检查更新。")
 
 
-async def keep_alive(api_url, api_key):
+async def keep_alive(api_url=OPENAI_API_URL, api_key=OPENAI_SECRET):
     """
     实现 Keep-Alive 机制，用于监控 API 的连接状态。
 
@@ -116,6 +121,17 @@ async def keep_alive(api_url, api_key):
         api_url (str): 要监控的 API 地址。
         api_key (str): 用于 API 认证的密钥。
     """
+
+    if not UPDATE_KEEP_ALIVE and not OPENAI_KEEP_ALIVE:
+        _log.warning("您已关闭 更新检查 和 OpenAI API 的 Keep-Alive 功能~")
+        return
+    if not UPDATE_KEEP_ALIVE:
+        _log.warning("您已关闭 更新检查 的 Keep-Alive 功能，建议打开以保持程序最新~")
+        return
+    if not OPENAI_KEEP_ALIVE:
+        _log.warning("您已关闭 OpenAI API 的 Keep-Alive 功能，建议打开以保持 API 连接正常~")
+        return
+
     headers = {"Authorization": f"Bearer {api_key}"}
 
     # 在启动时检查一次更新
@@ -137,5 +153,15 @@ async def keep_alive(api_url, api_key):
         except Exception as e:
             _log.error(f"OpenAI API 监控出现未知错误: {e}")
 
-        # 每隔 60 秒检查一次连接状态
-        await asyncio.sleep(60)
+        # 每隔3分钟检查一次连接状态
+        await asyncio.sleep(180)
+
+
+async def update_check_loop():
+    """
+    定期检查更新的循环。
+    """
+    while True:
+        await check_for_updates()
+        # 每隔15分钟检查一次更新
+        await asyncio.sleep(900)

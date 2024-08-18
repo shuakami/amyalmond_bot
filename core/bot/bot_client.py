@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.0 (Alpha_817001)
+Version: 1.1.2 (Beta_818003)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -20,21 +20,21 @@ import botpy
 from botpy.message import GroupMessage
 
 # user_management.py模块 - <用户管理模块化文件>
-from user_management import load_user_names
+from core.utils.user_management import load_user_names
 # utils.py模块 - <工具模块化文件>
-from utils import load_system_prompt
+from core.utils.utils import load_system_prompt
 # config.py模块 - <配置管理模块化文件>
 from config import SYSTEM_PROMPT_FILE, test_config
 # file_handler.py模块 - <文件处理模块化文件>
-from file_handler import ConfigFileHandler
-# logger.py模块 - <日志记录模块化文件>
-from logger import get_logger
+from core.utils.file_handler import ConfigFileHandler
+# logger.py模块 - <日志记录模块>
+from core.utils.logger import get_logger
 # message_handler.py模块 - <消息处理模块化文件>
-from message_handler import MessageHandler
+from core.bot.message_handler import MessageHandler
 # memory_manager.py模块 - <内存管理模块化文件>
-from memory_manager import MemoryManager
+from core.memory.memory_manager import MemoryManager
 # keep_alive.py模块 - <Keep-Alive机制模块化文件>
-from keep_alive import keep_alive
+from core.keep_alive import keep_alive
 
 _log = get_logger()
 

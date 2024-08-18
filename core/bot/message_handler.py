@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.0 (Alpha_817001)
+Version: 1.1.2 (Beta_818003)
 
 message_handler.py 负责处理群组消息，包括消息队列的管理和新用户注册等功能
 """
@@ -19,11 +19,11 @@ from botpy.message import GroupMessage
 from botpy.types.message import Reference
 
 # user_management.py模块 - <用于用户内容清理、用户名获取、用户注册检查及新增用户处理>
-from user_management import clean_content, get_user_name, is_user_registered, add_new_user
+from core.utils.user_management import clean_content, get_user_name, is_user_registered, add_new_user
 # utils.py模块 - <从回复消息中提取记忆内容>
-from utils import extract_memory_content
-# logger.py模块 - <日志记录>
-from logger import get_logger
+from core.utils.utils import extract_memory_content
+# logger.py模块 - <日志记录模块>
+from core.utils.logger import get_logger
 
 _log = get_logger()
 

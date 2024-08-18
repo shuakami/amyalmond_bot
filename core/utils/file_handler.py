@@ -13,7 +13,7 @@ file_handler.py 用于监控系统提示文件的修改，并在文件发生变�
 import watchdog.events
 
 # logger.py模块 - <用于记录日志>
-from logger import get_logger
+from .logger import get_logger
 # config.py模块 - <获取系统提示文件的路径>
 from config import SYSTEM_PROMPT_FILE
 
