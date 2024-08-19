@@ -13,12 +13,12 @@ g = Github(GITHUB_TOKEN)
 # 获取仓库
 repo = g.get_repo(REPO_NAME)
 
-# 获取所有的未标记的 Issues
-issues = repo.get_issues(state="open", labels=[])
+# 获取所有没有标签的 Issues（不区分是否打开）
+issues = repo.get_issues(labels=[])
 
 # System prompt
 system_prompt = (
-    "你是一个优秀的代码问题标签助手。以下是 GitHub Issue 的描述内容，"
+    "你是一个优秀的代码问题标签助手。以下是 GitHub Issue 的标题和描述内容，"
     "请根据内容给出适合的标签。"
     "你需要按以下格式返回标签：\n"
     "标签1, 标签2, 标签3\n"
@@ -30,7 +30,8 @@ system_prompt = (
 )
 
 # 请求体模板
-def create_request(issue_body):
+def create_request(issue_title, issue_body):
+    combined_content = f"标题: {issue_title}\n内容: {issue_body}"
     return {
         "max_tokens": 1200,
         "model": "gpt-4o-mini",
@@ -39,7 +40,7 @@ def create_request(issue_body):
         "presence_penalty": 1,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": issue_body}
+            {"role": "user", "content": combined_content}
         ]
     }
 
@@ -49,10 +50,11 @@ headers = {
     "Authorization": "Bearer hk-k416ch1000010138b9f6f6efae6a7a407995c942b8d9221a"
 }
 
-# 遍历所有未标记的 Issues
+# 遍历所有没有标签的 Issues
 for issue in issues:
+    issue_title = issue.title
     issue_body = issue.body
-    data = create_request(issue_body)
+    data = create_request(issue_title, issue_body)
 
     # 调用 OpenAI API
     response = requests.post("https://api.openai-hk.com/v1/chat/completions", headers=headers, data=json.dumps(data).encode('utf-8'))
@@ -65,20 +67,9 @@ for issue in issues:
     print(f"原始返回的标签: {result['choices'][0]['message']['content']}")
     print(f"解析后的标签: {labels}")
 
-    # 确保标签合法
-    valid_labels = [label for label in labels if label in [
-        'bot', 'blocked', 'bot-core', 'bug', 'discussion', 'documentation', 'duplicate', 'enhancement', 'good-first-issue',
-        'in-progress', 'memory-module', 'new-feature', 'on-hold', 'plugin-system', 'priority-high', 'priority-low',
-        'priority-medium', 'question', 'refactor', 'stubborn-bug', 'urgent-bug', 'wontfix'
-    ]]
-
-    if valid_labels:
-        # 逐个添加标签
-        for label in valid_labels:
-            try:
-                issue.add_to_labels(label)
-                print(f"已为 Issue #{issue.number} 添加标签: {label}")
-            except Exception as e:
-                print(f"添加标签 {label} 失败: {e}")
+    # 为 Issue 添加标签
+    if labels:
+        issue.add_to_labels(*labels)
+        print(f"已为 Issue #{issue.number} 添加标签: {labels}")
     else:
-        print(f"未添加任何标签到 Issue #{issue.number}")
+        print(f"Issue #{issue.number} 没有需要添加的标签。")
