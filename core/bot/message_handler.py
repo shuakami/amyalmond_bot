@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Version: 1.1.5 (Alpha_819002)
 
 message_handler.py 负责处理群组消息，包括消息队列的管理和新用户注册等功能
 """
@@ -13,7 +13,6 @@ message_handler.py 负责处理群组消息，包括消息队列的管理和新�
 import asyncio
 import time
 from datetime import datetime
-
 
 from botpy.message import GroupMessage
 from botpy.types.message import Reference
@@ -113,11 +112,13 @@ class MessageHandler:
 
                     # 处理新用户注册
                     if not is_user_registered(message.author.member_openid):
-                        await self.handle_new_user_registration(group_id, message.author.member_openid, cleaned_content, message.id)
+                        await self.handle_new_user_registration(group_id, message.author.member_openid, cleaned_content,
+                                                                message.id)
                         continue
 
                     # 将用户消息添加到历史记录，并处理队列中的消息
-                    self.memory_manager.add_message_to_history(group_id, {"role": "user", "content": f"{user_name}: {cleaned_content}"})
+                    self.memory_manager.add_message_to_history(group_id, {"role": "user",
+                                                                          "content": f"{user_name}: {cleaned_content}"})
                     context = await self.memory_manager.compress_memory(group_id, self.client.get_gpt_response)
 
                     user_input_with_name = f"[{user_name}: {cleaned_content}]"
@@ -130,16 +131,31 @@ class MessageHandler:
                         reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
 
                     # 提取并存储新记忆内容
-                    memory_content = extract_memory_content(reply_content)
-                    if memory_content:
-                        await self.memory_manager.append_to_long_term_memory(group_id, memory_content)
-                        reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
+                    # 确保reply_content不是None
+                    if reply_content is not None:
+                        memory_content = extract_memory_content(reply_content)
+                        if memory_content:
+                            await self.memory_manager.append_to_long_term_memory(group_id, memory_content)
+                            reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
 
                     # 生成并发送回复消息，包含消息处理时间
                     message_datetime = datetime.fromisoformat(message.timestamp)
                     message_timestamp = message_datetime.timestamp()
-                    reply_message = f"{reply_content}\n---\n本次消息花费了 {int((time.time() - message_timestamp) * 1000)} 毫秒，请及时支付电费账单。"
 
+                    # 生成回复消息的基本内容
+                    reply_message_content = (reply_content or '抱歉，我暂时无法回复你的消息')
+
+                    # 定义插件操作标识符
+                    plugin_placeholder = "<!-- Plugin Content -->"
+
+                    # 将插件标识符插入回复消息
+                    reply_message = f"{reply_message_content}\n---\n{plugin_placeholder}"
+
+                    _log.debug(f"Before plugin: {reply_message}")  # 添加日志，查看插件调用前的 reply_message
+                    reply_message = await self.client.process_plugins(message, reply_message)
+                    _log.debug(f"After plugin: {reply_message}")  # 添加日志，查看插件调用后的 reply_message
+
+                    # 发送最终的回复消息
                     message_reference = Reference(message_id=message.id)
                     await self.client.api.post_group_message(
                         group_openid=group_id,
@@ -149,13 +165,17 @@ class MessageHandler:
                     )
 
                     # 将机器人回复添加到历史记录中，并保存记忆
-                    self.memory_manager.add_message_to_history(group_id, {"role": "assistant", "content": reply_content})
+                    if reply_content is not None:  # 确保reply_content不是None
+                        self.memory_manager.add_message_to_history(group_id,
+                                                                   {"role": "assistant", "content": reply_content})
                     await self.memory_manager.save_memory()
 
                 except Exception as e:
                     _log.error(f"Error processing message for group {group_id}: {e}", exc_info=True)
                 finally:
                     self.message_queues[group_id].task_done()
+
+
 
     async def handle_new_user_registration(self, group_id, user_id, cleaned_content, msg_id):
         """

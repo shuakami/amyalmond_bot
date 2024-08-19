@@ -1,11 +1,11 @@
 """
-AmyAlmond Project - bot_client.py
+AmyAlmond Project - core/bot/bot_client.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Version: 1.1.5 (Alpha_819002)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -84,6 +84,49 @@ class MyClient(botpy.Client):
         self.observer.schedule(event_handler, path='.', recursive=False)
         self.observer.start()
 
+        self.on_message_handlers = []
+        self.on_ready_handlers = []
+
+        self.plugins = []
+
+    async def process_plugins(self, message: botpy.message, reply_content: str) -> str:
+        """
+        调用所有已启用的插件处理回复内容。
+
+        Args:
+            message (botpy.Message): 接收到的原始消息对象。
+            reply_content (str): 待处理的回复内容字符串。
+
+        Returns:
+            str: 处理后的回复内容字符串。
+        """
+        for plugin in self.plugins:
+            reply_content = await plugin.on_message(message, reply_content)
+        return reply_content
+
+    def register_event_handler(self, handler, event_type):
+        """
+        注册事件处理方法
+
+        Args:
+            handler (function): 事件处理方法
+            event_type (str): 事件类型
+        """
+        if event_type == "on_message":
+            self.on_message_handlers.append(handler)
+        elif event_type == "on_ready":
+            self.on_ready_handlers.append(handler)
+
+    async def on_message(self, message: botpy.message):
+        """
+        当收到消息时调用
+
+        Args:
+            message (botpy.Message): 收到的消息对象
+        """
+        for handler in self.on_message_handlers:
+            await handler(message)
+
     def load_system_prompt(self):
         """
         加载机器人SystemPrompt
@@ -108,6 +151,10 @@ class MyClient(botpy.Client):
 
         # 启动 Keep-Alive 任务
         await asyncio.create_task(keep_alive(self.openai_api_url, self.openai_secret))
+
+        # 调用插件的 on_ready 方法
+        for handler in self.on_ready_handlers:
+            await handler()
 
     async def on_group_at_message_create(self, message: GroupMessage):
         """

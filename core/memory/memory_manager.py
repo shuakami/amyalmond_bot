@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Version: 1.1.5 (Alpha_819002)
 
 memory_manager.py 包含管理消息历史和长期记忆的主要类和方法
 """

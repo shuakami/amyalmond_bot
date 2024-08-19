@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/18 11:35
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Version: 1.1.5 (Alpha_819002)
 
 logger.py 用于日志记录
 """
@@ -18,6 +18,9 @@ import os
 def get_logger():
     logger = botpy.logging.get_logger()
 
+    # 获取项目根目录
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+
     # 默认配置
     log_level = "INFO"
     debug_mode = False
@@ -26,11 +29,14 @@ def get_logger():
     # 尝试读取配置文件
     try:
         import yaml
-        config_path = os.path.join(os.path.dirname(__file__), "configs", "config.yaml")
+        config_path = os.path.join(project_root, "configs", "config.yaml")
+        # print(f"读取配置文件: {config_path}")
         if os.path.exists(config_path):
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
             log_level = config.get("log_level", "INFO").upper()
+            # print(f"读取到的日志级别: {log_level}")
+            # print(f"读取到的debug模式: {debug_mode}")
             debug_mode = config.get("debug", False)
             log_dir = os.path.join(os.path.dirname(__file__), "logs")
             os.makedirs(log_dir, exist_ok=True)
