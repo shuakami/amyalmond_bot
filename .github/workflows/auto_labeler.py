@@ -20,8 +20,8 @@ issues_without_labels = [issue for issue in all_issues if len(list(issue.labels)
 
 # System prompt
 system_prompt = (
-    "你是一个优秀的代码问题标签助手。以下是多个 GitHub Issue 的标题和描述内容，"
-    "请根据内容给出适合的标签。"
+    "你是一个高级的代码问题标签助手。以下是多个 GitHub Issue 的标题和描述内容，"
+    "请根据内容给出适合的标签。建议bug只带一个分类，然后是优先级，然后是其他标签"
     "你需要按以下格式返回标签：\n"
     "Issue 1: 标签1, 标签2, 标签3\n"
     "Issue 2: 标签1, 标签2\n"
