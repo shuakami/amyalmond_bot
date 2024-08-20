@@ -36,8 +36,8 @@ def create_request(issues_data):
         "请为每个 Issue 推荐最合适的 Assignee，并为推荐的 Assignee 生成一条通知消息。"
         "对于每个 Issue，请使用如下格式：\n"
         "Issue <编号>: Assignee1, Assignee2\n"
-        "Message <编号>: 通知 @Assignee1 和 @Assignee2，他们已被分配处理 Issue <编号>。\n"
-        "确保每个 Issue 至少有一个 Assignee，并且通知消息中使用 @ 符号提及相关人员，请尽量客气。"
+        "Message <编号>: 通知内容\n"
+        "确保每个 Issue 至少有一个 Assignee，并且通知消息中使用 @ 符号提及相关人员，请尽量客气（不要提到issue序号，而是自己总结这个issue的内容输出合适的内容）。"
     )
     
     combined_content = "\n\n".join([
