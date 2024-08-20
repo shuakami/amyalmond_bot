@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Alpha_819002)
+Version: 1.1.5 (Beta_820003)
 
 user_management.py - 用户管理模块，负责用户名映射的加载和保存
 """

@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Alpha_819002)
+Version: 1.1.5 (Beta_820003)
 
 memory_manager.py 包含管理消息历史和长期记忆的主要类和方法
 """
@@ -138,10 +138,12 @@ class MemoryManager:
         message_history = self.get_message_history(group_id)
         if len(message_history) > MAX_CONTEXT_MESSAGES:
             summary = await get_gpt_response(
-                list(message_history), "请用一句话总结以上对话"
+                list(message_history), "请在不忽略关键人名或数据的情况下总结此段对话。"
             )
             message_history.clear()
             message_history.append({"role": "assistant", "content": summary})
+            # 打印压缩日志（中文）
+            _log.info(f"压缩群组 {group_id} 的消息历史，摘要内容：{summary}")
         return list(message_history)
 
     async def read_long_term_memory(self, group_id):

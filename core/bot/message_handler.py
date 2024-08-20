@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Alpha_819002)
+Version: 1.1.5 (Beta_820003)
 
 message_handler.py 负责处理群组消息，包括消息队列的管理和新用户注册等功能
 """
@@ -151,9 +151,9 @@ class MessageHandler:
                     # 将插件标识符插入回复消息
                     reply_message = f"{reply_message_content}\n---\n{plugin_placeholder}"
 
-                    _log.debug(f"Before plugin: {reply_message}")  # 添加日志，查看插件调用前的 reply_message
+                    _log.debug(f"Before plugin: {reply_message}")
                     reply_message = await self.client.process_plugins(message, reply_message)
-                    _log.debug(f"After plugin: {reply_message}")  # 添加日志，查看插件调用后的 reply_message
+                    _log.debug(f"After plugin: {reply_message}")  # 查看插件调用后的 reply_message
 
                     # 发送最终的回复消息
                     message_reference = Reference(message_id=message.id)
@@ -174,8 +174,6 @@ class MessageHandler:
                     _log.error(f"Error processing message for group {group_id}: {e}", exc_info=True)
                 finally:
                     self.message_queues[group_id].task_done()
-
-
 
     async def handle_new_user_registration(self, group_id, user_id, cleaned_content, msg_id):
         """

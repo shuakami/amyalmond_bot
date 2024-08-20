@@ -13,9 +13,6 @@ def get_plugin_logger():
     """
     获取插件专用的 logger 对象，用于记录插件日志信息。
 
-    Args:
-        name (str): 插件名称。
-
     Returns:
         logging.Logger: 插件专用的 logger 对象。
     """
@@ -44,13 +41,13 @@ def load_plugin_config(plugin_name, filename="config.json"):
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
-            get_plugin_logger().debug(f"Plugin {plugin_name} requested config file: {config_path}")
-            get_plugin_logger().info(f"Successfully loaded config file from {config_path}")
-            get_plugin_logger().debug(f"Config content: {config}")
+            get_plugin_logger().debug(f"插件 {plugin_name} 请求了配置文件: {config_path}")
+            get_plugin_logger().info(f"成功加载了来自 {config_path} 的配置文件")
+            get_plugin_logger().debug(f"配置内容: {config}")
             return config
     except FileNotFoundError:
-        get_plugin_logger().error(f"Config file not found: {config_path}")
+        get_plugin_logger().error(f"未找到配置文件: {config_path}")
         return {}
     except json.JSONDecodeError as e:
-        get_plugin_logger().error(f"Failed to load config file from {config_path}: {e}")
+        get_plugin_logger().error(f"无法加载来自 {config_path} 的配置文件: {e}")
         return {}

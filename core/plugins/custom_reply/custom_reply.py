@@ -1,5 +1,5 @@
 """
-AmyAlmond Plugins - core/plugins/custom_reply.py
+AmyAlmond Plugins - core/plugins/custom_reply/custom_reply.py
 """
 import random
 import os
