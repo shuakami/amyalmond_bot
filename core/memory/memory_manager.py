@@ -3,164 +3,54 @@ AmyAlmond Project - core/memory/memory_manager.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/17 16:00
+Last Edited: 2024/8/22 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Beta_820003)
+Version: 1.2.0 (Alpha_823006)
 
-memory_manager.py 包含管理消息历史和长期记忆的主要类和方法
+memory_manager.py 包含管理消息历史和记忆存储的主要类和方法，支持MongoDB Full-Text Search+Elasticsearch以及智能记忆管理。
 """
+import random
+import jieba.analyse
 
-import json
-import os
 from collections import deque
-
-# config.py模块 - <配置文件包含常量和路径>
-from config import MAX_CONTEXT_MESSAGES, MEMORY_FILE, LONG_TERM_MEMORY_FILE
-# logger.py模块 - <日志记录模块>
+from core.llm.plugins.inject_memory_client import InjectMemoryClient
+from core.db.elasticsearch_index_manager import ElasticsearchIndexManager
+from core.utils.mongodb_utils import MongoDBUtils
+from config import MAX_CONTEXT_TOKENS, MEMORY_THRESHOLD, OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL
 from core.utils.logger import get_logger
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from core.llm.plugins.openai_client import OpenAIClient
 
 _log = get_logger()
 
 
 class MemoryManager:
     """
-    管理消息历史和长期记忆的类
+    管理消息历史和智能记忆存储的类
     """
 
     def __init__(self):
         """
-        初始化 MemoryManager 实例,创建一个空的消息历史记录字典
+        初始化 MemoryManager 实例，创建消息历史字典并连接到数据库
         """
         self.message_history = {}
+        self.mongo = MongoDBUtils()  # 初始化MongoDB工具
+        self.es_manager = ElasticsearchIndexManager()  # 初始化Elasticsearch管理器
+        self.inject_client = InjectMemoryClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)  # 初始化注入记忆的LLM客户端
+        self.openai_client = OpenAIClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)
 
-    async def append_to_long_term_memory(self, group_id, content):
+    def add_message_to_history(self, group_id, message):
         """
-        将内容追加到长期记忆文件中
+        添加一条消息到指定群组的消息历史中
 
         参数:
             group_id (str): 群组的唯一标识符
-            content (str): 需要存储的内容
+            message (dict): 包含角色和内容的消息字典
         """
-        try:
-            with open(LONG_TERM_MEMORY_FILE.format(group_id), "a", encoding="utf-8") as f:
-                f.write(content + "\n")
-            _log.info(f"已将内容添加到群组 {group_id} 的长期记忆中")
-        except Exception as e:
-            _log.error(f"将内容添加到群组 {group_id} 的长期记忆时发生错误: {e}")
-
-    async def load_memory(self):
-        """
-        加载内存中的消息历史和长期记忆文件
-
-        读取 memory_file 文件中的数据,并加载每个群组的消息历史。
-        如果长期记忆文件存在,也会加载并添加到消息历史中
-        """
-        _log.info("Loading memory...")
-
-        # 检查 memory_file 是否存在
-        if not os.path.exists(MEMORY_FILE):
-            _log.info(f"记忆文件 {MEMORY_FILE} 不存在,将从空记忆开始。")
-            return
-
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                _log.info(f"Reading memory file: {MEMORY_FILE}")
-                data = json.load(f)
-        except json.JSONDecodeError as e:
-            _log.warning(f"记忆文件 {MEMORY_FILE} 格式有误,将从空记忆开始。错误信息: {e}")
-            return
-        except Exception as e:
-            _log.error(f"读取记忆文件 {MEMORY_FILE} 时发生错误: {e}")
-            return
-
-        _log.info(f"Memory file content: {data}")
-        for group_id, messages in data.items():
-            _log.info(f"Processing group: {group_id}")
-            if not isinstance(messages, list):
-                _log.warning(f"群组 {group_id} 的数据格式不正确,将跳过该群组。")
-                continue
-
-            self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_MESSAGES)
-            for message in messages:
-                if isinstance(message, dict) and 'role' in message and 'content' in message:
-                    self.message_history[group_id].append(message)
-                else:
-                    _log.warning(f"群组 {group_id} 中包含无效的消息,将跳过该消息: {message}")
-
-            _log.info(f"Loaded {len(self.message_history[group_id])} messages for group {group_id}")
-
-            # 尝试加载长期记忆文件
-            try:
-                long_term_memory_file = LONG_TERM_MEMORY_FILE.format(group_id)
-                if os.path.exists(long_term_memory_file):
-                    with open(long_term_memory_file, "r", encoding="utf-8") as f:
-                        long_term_memory = f.read()
-                        self.message_history[group_id].appendleft({"role": "system", "content": long_term_memory})
-                        _log.info(f"Loaded long-term memory for group {group_id}")
-                else:
-                    _log.info(f"群组 {group_id} 的长期记忆文件不存在,将跳过加载。")
-            except Exception as e:
-                _log.warning(f"加载群组 {group_id} 的长期记忆时发生错误: {e}")
-
-        _log.info("Memory loading completed")
-
-    async def save_memory(self):
-        """
-        将当前的消息历史保存到内存文件中
-
-        将每个群组的消息历史保存到 memory_file 中,以便下次加载
-        """
-        _log.info("Saving memory...")
-        try:
-            data = {}
-            for group_id, messages in self.message_history.items():
-                if len(messages) > MAX_CONTEXT_MESSAGES:
-                    messages = list(messages)[-MAX_CONTEXT_MESSAGES:]
-                data[group_id] = list(messages)
-            with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            _log.error(f"Error saving memory: {e}")
-
-    async def compress_memory(self, group_id, get_gpt_response):
-        """
-        压缩消息历史,以减少内存占用
-
-        如果消息历史超过最大允许条数,会使用 GPT 模型生成一个摘要并替换历史记录
-
-        参数:
-            group_id (str): 群组的唯一标识符
-            get_gpt_response (function): 用于获取 GPT 回复的函数
-
-        返回:
-            list: 压缩后的消息历史
-        """
-        message_history = self.get_message_history(group_id)
-        if len(message_history) > MAX_CONTEXT_MESSAGES:
-            summary = await get_gpt_response(
-                list(message_history), "请在不忽略关键人名或数据的情况下总结此段对话。"
-            )
-            message_history.clear()
-            message_history.append({"role": "assistant", "content": summary})
-            # 打印压缩日志（中文）
-            _log.info(f"压缩群组 {group_id} 的消息历史，摘要内容：{summary}")
-        return list(message_history)
-
-    async def read_long_term_memory(self, group_id):
-        """
-        读取长期记忆文件的内容
-
-        参数:
-            group_id (str): 群组的唯一标识符
-
-        返回:
-            str: 长期记忆的内容,如果文件不存在则返回提示信息
-        """
-        try:
-            with open(LONG_TERM_MEMORY_FILE.format(group_id), "r", encoding="utf-8") as f:
-                return f.read()
-        except FileNotFoundError:
-            return "暂无长期记忆,请先与我聊天以建立对话记忆"
+        if group_id not in self.message_history:
+            self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
+        self.message_history[group_id].append(message)
 
     def get_message_history(self, group_id):
         """
@@ -172,16 +62,248 @@ class MemoryManager:
         返回:
             deque: 包含消息历史的双端队列
         """
-        return self.message_history.get(group_id, deque(maxlen=MAX_CONTEXT_MESSAGES))
+        return self.message_history.get(group_id, deque(maxlen=MAX_CONTEXT_TOKENS))
 
-    def add_message_to_history(self, group_id, message):
+    async def compress_memory(self, group_id, get_gpt_response):
         """
-        添加一条消息到指定群组的消息历史中
+        压缩消息历史以减少内存占用，如果消息历史超过最大允许Token数，将使用 GPT 生成摘要并替换历史记录
 
         参数:
             group_id (str): 群组的唯一标识符
-            message (dict): 包含角色和内容的消息字典
+            get_gpt_response (function): 用于获取 GPT 回复的函数
+
+        返回:
+            list: 压缩后的消息历史
         """
-        if group_id not in self.message_history:
-            self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_MESSAGES)
-        self.message_history[group_id].append(message)
+        message_history = self.get_message_history(group_id)
+
+        # 过滤掉没有 'content' 键的消息
+        valid_message_history = [msg for msg in message_history if 'content' in msg and msg['content'].strip()]
+
+        token_count = sum(len(msg['content']) for msg in valid_message_history)
+
+        # 创建新的列表来存储压缩后的消息历史记录
+        compressed_history = valid_message_history
+
+        if token_count > MAX_CONTEXT_TOKENS:
+            summary = await get_gpt_response(
+                list(valid_message_history), "你是高级算法机器，请在不忽略关键人名或数据的情况下总结全部对话。"
+            )
+            compressed_history = [{"role": "assistant", "content": summary}]
+
+            # 将摘要存储到Elasticsearch中，以便以后可以检索到
+            await self.store_memory(group_id, None, "assistant", summary)
+            _log.info(f"压缩群组 {group_id} 的消息历史，摘要内容：{summary}")
+
+        return compressed_history
+
+    async def store_memory(self, group_id, message, role, content):
+        """
+        智能存储消息到数据库，根据内容决定存储到MongoDB还是Elasticsearch。
+
+        参数:
+            group_id (str): 群组的唯一标识符
+            message (GroupMessage): 包含角色和内容的消息对象，允许为None
+            role (str): 角色，可能是 'user' 或 'assistant'
+            content (str): 消息内容
+        """
+        try:
+            _log.debug(f"正在存储消息: group_id={group_id}, role={role}, content={content}")
+
+            # 短消息存储到MongoDB，长消息和摘要存储到Elasticsearch
+            if len(content) <= MEMORY_THRESHOLD:
+                # 存储到MongoDB
+                self.mongo.insert_conversation({
+                    "group_id": group_id,
+                    "role": role,
+                    "content": content
+                })
+                _log.info(f"消息已存储到MongoDB, group_id: {group_id}, role: {role}, content: {content}")
+            else:
+                # 存储到Elasticsearch
+                self.es_manager.bulk_insert(index_name="messages", data=[{
+                    "group_id": group_id,
+                    "role": role,
+                    "content": content
+                }])
+                _log.info(f"消息已存储到Elasticsearch, group_id: {group_id}, role: {role}, content: {content}")
+        except Exception as e:
+            _log.error(f"存储消息到数据库时发生错误: {e}", exc_info=True)
+
+    async def load_memory(self):
+        try:
+            _log.info("正在加载消息历史...")
+
+            # 从MongoDB加载消息历史
+            conversations = self.mongo.find_all_conversations()
+            for conversation in conversations:
+                group_id = conversation.get('group_id')
+                if group_id not in self.message_history:
+                    self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
+                self.message_history[group_id].append(conversation.get('message', {}))
+
+            _log.debug(f"MongoDB消息历史: {conversations}")
+            _log.info("MongoDB消息历史加载完成。")
+
+            # 使用 set 对消息进行去重
+            unique_messages = set()
+            for conversation in conversations:
+                message = conversation.get('message', {})
+                message_str = str(message)  # 将字典转换为字符串以便去重
+                if message_str not in unique_messages:
+                    group_id = conversation.get('group_id')
+                    if group_id not in self.message_history:
+                        self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
+                    self.message_history[group_id].append(message)
+                    unique_messages.add(message_str)
+
+            # 从Elasticsearch中加载更多记忆
+            es_conversations = self.es_manager.search(index_name="messages", query={"query": {"match_all": {}}})
+            for conversation in es_conversations:
+                group_id = conversation.get('group_id')
+                if group_id not in self.message_history:
+                    self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
+                self.message_history[group_id].append({
+                    "role": conversation.get('role'),
+                    "content": conversation.get('content')
+                })
+
+            _log.debug(f"Elasticsearch消息历史: {es_conversations}")
+            _log.info("Elasticsearch消息历史加载完成。")
+
+            _log.info("所有消息历史已成功加载。")
+
+        except Exception as e:
+            _log.error(f"加载消息历史时发生错误: {e}", exc_info=True)
+
+    async def retrieve_memory(self, group_id, query):
+        try:
+            keywords = self.extract_keywords(query)
+            _log.debug(f"提取的关键词: {keywords}")
+
+            basic_results = await self.basic_search(group_id, keywords)
+            if not basic_results:
+                _log.info("基础搜索无结果，尝试语义分析")
+                semantic_keywords = await self.semantic_analysis(query)
+                _log.debug(f"语义分析关键词: {semantic_keywords}")
+                basic_results = await self.advanced_search(group_id, semantic_keywords)
+
+            if basic_results:
+                sorted_results = self.sort_results_by_relevance(query, basic_results)
+                _log.info(f"排序后的搜索结果: {sorted_results}")
+                return {"role": "system", "content": f"相关记忆: {sorted_results[0]['content']}"}
+            else:
+                _log.info("未找到相关记忆")
+                return None
+
+        except Exception as e:
+            _log.error(f"检索记忆时发生错误: {e}", exc_info=True)
+            return None
+
+    def sort_results_by_relevance(self, query, results):
+        # 准备文档集合
+        documents = [result['content'] for result in results]
+        documents.insert(0, query)  # 将查询添加到文档集合的开头
+
+        # 创建TF-IDF向量化器
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(documents)
+
+        # 计算查询与每个文档的余弦相似度
+        query_vec = tfidf_matrix[0:1]
+        cosine_similarities = cosine_similarity(query_vec, tfidf_matrix[1:]).flatten()
+
+        # 将相似度分数与结果配对，并按相似度降序排序
+        sorted_results = sorted(zip(results, cosine_similarities), key=lambda x: x[1], reverse=True)
+
+        # 返回排序后的结果
+        return [item[0] for item in sorted_results]
+
+    def extract_keywords(self, text, top_k=5):
+        """使用jieba进行关键词提取"""
+        keywords = jieba.analyse.extract_tags(text, topK=top_k)
+        return keywords
+
+    async def basic_search(self, group_id, keywords):
+        query = {
+            "group_id": group_id,
+            "content": {"$regex": "|".join(keywords)}
+        }
+        _log.debug(f"MongoDB查询: {query}")
+        results = self.mongo.find_conversations(query)
+        _log.debug(f"MongoDB搜索结果: {results}")
+        return results
+
+    async def semantic_analysis(self, query):
+        """使用LLM进行语义分析,提取关键概念"""
+        system_prompt = "你是一个语义分析专家。请分析以下查询，提取出3-5个关键概念，用逗号分隔。"
+        context = []  # 这里可以是空列表，因为我们不需要之前的对话上下文
+        user_input = f"请分析以下查询,提取出3-5个关键概念,用逗号分隔:\n{query}"
+
+        response = await self.openai_client.get_response(context=context, user_input=user_input,
+                                                         system_prompt=system_prompt)
+
+        if response:
+            return response.strip().split(',')
+        return []
+
+    async def advanced_search(self, group_id, semantic_keywords):
+        query = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {"term": {"group_id": group_id}},
+                        {"multi_match": {
+                            "query": " ".join(semantic_keywords),
+                            "fields": ["content^2", "context"]
+                        }}
+                    ]
+                }
+            }
+        }
+
+        _log.debug(f"Elasticsearch查询: {query}")
+        results = self.es_manager.search(index_name="messages", query=query)
+        _log.debug(f"Elasticsearch搜索结果: {results}")
+        return [result['_source'] for result in results if '_source' in result]
+
+    async def inject_memory_to_llm(self, group_id, prompt):
+        """
+        主动查询记忆并注入到LLM的System Prompt中
+
+        参数:
+            group_id (str): 群组的唯一标识符
+            prompt (str): 用于生成系统提示的基础Prompt
+
+        返回:
+            str: 注入记忆后的系统提示
+        """
+        try:
+            # 从历史对话中提取关键词
+            keywords = await self.inject_client.get_keywords_for_memory_retrieval(prompt)
+
+            # 检索相关记忆
+            memory_results = await self.retrieve_memory(group_id, keywords)
+
+            # 将检索到的记忆格式化并注入到System Prompt中 <B>
+            memory_contexts = [{"role": "system", "content": f"相关记忆: {mem.get('content', '')}"} for mem in
+                               memory_results]
+
+            # 确保记忆内容唯一
+            unique_memory_contexts = []
+            for memory in memory_contexts:
+                if memory not in unique_memory_contexts:
+                    unique_memory_contexts.append(memory)
+
+            # 混合插入唯一记忆内容
+            full_prompt = [{"role": "system", "content": prompt}]
+            for memory in unique_memory_contexts:
+                insert_position = random.randint(0, len(full_prompt))
+                full_prompt.insert(insert_position, memory)
+
+            _log.info(f"生成的系统提示已注入记忆，group_id: {group_id}, prompt: {full_prompt}")
+            return full_prompt
+
+        except Exception as e:
+            _log.error(f"注入记忆到LLM的System Prompt时发生错误: {e}", exc_info=True)
+            return [{"role": "system", "content": prompt}]

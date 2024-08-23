@@ -3,9 +3,9 @@ AmyAlmond Project - core/bot/bot_client.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/17 16:00
+Last Edited: 2024/8/22 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Beta_820003)
+Version: 1.2.0 (Alpha_823006)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -13,12 +13,9 @@ import asyncio
 import random
 import subprocess
 import sys
-import time
 import watchdog.observers
-import requests
 import botpy
 from botpy.message import GroupMessage
-
 
 # user_management.py模块 - <用户管理模块化文件>
 from core.utils.user_management import load_user_names
@@ -154,7 +151,11 @@ class MyClient(botpy.Client):
         """
         _log.info(f"Robot 「{self.robot.name}」 is ready!")
         load_user_names()
+
+        # 加载记忆
+        _log.info("正在加载记忆...")
         await self.memory_manager.load_memory()
+        _log.info("记忆加载完成。")
 
         # 启动 Keep-Alive 任务
         await asyncio.create_task(keep_alive(self.openai_api_url, self.openai_secret))
@@ -183,7 +184,7 @@ class MyClient(botpy.Client):
         重启机器人
 
         参数:
-            group_id (str): 群组ID
+            group_id (str): 羡组ID
             msg_id (str): 消息ID
         """
         await self.api.post_group_message(
@@ -196,10 +197,6 @@ class MyClient(botpy.Client):
 
         self.observer.stop()
         self.observer.join()
-
-        for task in self.message_handler.queue_timer.values():
-            task.cancel()
-        self.message_handler.queue_timer.clear()
 
         _log.info("Restart command received. Restarting bot...")
 
@@ -219,7 +216,6 @@ class MyClient(botpy.Client):
         _log.info("Hot reloading...")
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
         load_user_names()
-        await self.memory_manager.load_memory()
         _log.info("Hot reload completed")
         await self.api.post_group_message(
             group_openid=group_id,

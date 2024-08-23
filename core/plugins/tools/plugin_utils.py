@@ -2,21 +2,40 @@
 AmyAlmond Plugins - core/plugins/tools/plugin_utils.py
 插件工具模块
 """
+import logging
 import os
 import json
-from core.utils.logger import get_logger
+from logging.handlers import RotatingFileHandler
 
 PLUGIN_LOGGER_NAME = "AmyAlmond Plugins"
+
+LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "logs"))
+LOG_FILE = os.path.join(LOG_DIR, "plugin.log")
+LOG_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+LOG_BACKUP_COUNT = 5  # 保留5个旧日志文件
+
+# 创建日志目录
+os.makedirs(LOG_DIR, exist_ok=True)
 
 
 def get_plugin_logger():
     """
-    获取插件专用的 logger 对象，用于记录插件日志信息。
+    获取插件专用的 logger 对象，用于记录插件日志信息，并添加前缀 <AmyAlmond Plugins LOG>。
 
     Returns:
         logging.Logger: 插件专用的 logger 对象。
     """
-    logger = get_logger()
+    logger = logging.getLogger(PLUGIN_LOGGER_NAME)
+
+    if not logger.handlers:
+        # 设置日志处理器和格式化器
+        handler = RotatingFileHandler(LOG_FILE, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT)
+        formatter = logging.Formatter('<AAPL> %(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
     return logger
 
 

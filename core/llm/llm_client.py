@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Beta_820003)
+Version: 1.2.0 (Alpha_823006)
 
 llm_client.py - 定义了 LLM 客户端接口。
 """
@@ -28,5 +28,20 @@ class LLMClient(ABC):
 
         Returns:
             str: 处理后的回复消息。
+        """
+        pass
+
+    @abstractmethod
+    async def get_response(self, context, user_input, system_prompt):
+        """
+        根据上下文和用户输入，获取 LLM 模型的回复。
+
+        Args:
+            context (list): 对话上下文，包含之前的对话内容。
+            user_input (str): 用户输入的内容。
+            system_prompt (str): 系统提示。
+
+        Returns:
+            str: LLM 模型生成的回复内容。
         """
         pass

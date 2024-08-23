@@ -1,8 +1,4 @@
-"""
-OpenAI API 客户端
-----
-请注意，OpenAI API 的请求方式和提取方式支持众多第三方API厂商，所以不只限于OpenAI官方接口或密钥。
-"""
+import asyncio
 import time
 import httpx
 from core.utils.logger import get_logger
@@ -60,6 +56,7 @@ class OpenAIClient(LLMClient):
                             {"role": "user", "content": user_input}
                         ]
         }
+
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.openai_secret}"
@@ -67,6 +64,12 @@ class OpenAIClient(LLMClient):
 
         # 记录请求的payload
         _log.debug(f"Request payload: {payload}")
+
+        # 打印请求头
+        _log.debug(f"Request headers: {headers}")
+
+        # 打印一遍全配置
+        _log.debug(f"Full configuration: {self.__dict__}")
 
         try:
             async with httpx.AsyncClient() as client:
@@ -95,3 +98,31 @@ class OpenAIClient(LLMClient):
         except httpx.HTTPStatusError as e:
             _log.error(f"Error requesting from OpenAI API: {e}", exc_info=True)
             return "子网故障,过来楼下检查一下/。"
+
+
+    async def test(self):
+        """
+        测试 OpenAIClient 类的方法
+        """
+        context = [
+            {"role": "user", "content": "你好！"}
+        ]
+        user_input = "你还记得我之前说了多少个“你好”吗"
+        system_prompt = "你是一个友好的助手。"
+
+        response = await self.get_response(context, user_input, system_prompt)
+        print("API Response:", response)
+
+
+# 使用方法
+if __name__ == "__main__":
+    # 配置 OpenAIClient
+    openai_secret = "hk-x4xh1d1000010138e640592513caf599a394f11c49568645"
+    openai_model = "gpt-4o-mini"
+    openai_api_url = "https://api.openai-hk.com/v1/chat/completions"
+
+    # 创建 OpenAIClient 实例
+    client = OpenAIClient(openai_secret=openai_secret, openai_model=openai_model, openai_api_url=openai_api_url)
+
+    # 运行测试
+    asyncio.run(client.test())

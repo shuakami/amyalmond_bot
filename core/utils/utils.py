@@ -5,15 +5,16 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Beta_820003)
+Version: 1.2.0 (Alpha_823006)
 
 utils.py - 工具函数模块
 """
 
 import re
-from typing import Optional
+import platform
+from typing import Optional, Tuple
 # logger.py模块 - <用于记录日志>
-from .logger import get_logger
+from core.utils.logger import get_logger
 
 _log = get_logger()
 
@@ -54,3 +55,77 @@ def extract_memory_content(message: object) -> Optional[str]:
 def load_system_prompt(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+def calculate_token_count(messages: list) -> int:
+    """
+    计算消息列表中的token数量，用于确保消息上下文不会超出LLM的token限制。
+
+    参数:
+        messages (list): 包含消息字典的列表，每个字典包含角色和内容。
+
+    返回:
+        int: 消息列表中的总token数量。
+    """
+    total_tokens = 0
+
+    # 逐条消息计算token数量
+    for message in messages:
+        content = message.get('content', '')
+        tokens = tokenize(content)
+        total_tokens += len(tokens)
+
+    return total_tokens
+
+
+def tokenize(text: str) -> list:
+    """
+    将给定的文本拆分为token列表。
+
+    参数:
+        text (str): 需要token化的文本。
+
+    返回:
+        list: 包含文本中token的列表。
+    """
+    # 使用简单的正则表达式模拟GPT的token化规则
+    tokens = re.findall(r'\w+|[^\w\s]', text, re.UNICODE)
+    return tokens
+
+
+def detect_os_and_version() -> Tuple[Optional[str], Optional[str]]:
+    """
+    检测当前用户的操作系统和版本。
+
+    返回:
+        Tuple[Optional[str], Optional[str]]: 一个元组，包含操作系统名称和版本信息。
+        如果检测失败，返回 (None, None)。
+    """
+    try:
+        os_name = platform.system()
+        os_version = None
+
+        if os_name == "Windows":
+            os_version = platform.release()
+        elif os_name == "Linux":
+            try:
+                # 尝试获取更详细的Linux版本信息
+                with open("/etc/os-release", "r") as f:
+                    release_info = f.read()
+                match = re.search(r'PRETTY_NAME="([^"]+)"', release_info)
+                if match:
+                    os_version = match.group(1)
+                else:
+                    os_version = platform.version()  # 备用方法获取Linux内核版本
+            except FileNotFoundError:
+                os_version = platform.version()
+        elif os_name == "Darwin":
+            os_version = platform.mac_ver()[0]  # 获取macOS版本
+        else:
+            _log.warning(f"Warning: Unrecognized operating system: {os_name}")
+
+        return os_name, os_version
+
+    except Exception as e:
+        _log.error(f"Error: Failed to detect OS and version due to: {e}")
+        return None, None

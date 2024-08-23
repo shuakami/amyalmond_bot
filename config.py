@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/19 20:13
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.5 (Beta_820003)
+Version: 1.2.0 (Alpha_823006)
 
 config.py - 配置文件读取与验证
 """
@@ -38,6 +38,7 @@ LOG_FILE = os.path.join(LOG_DIR, "bot.log")
 MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
 LONG_TERM_MEMORY_FILE = os.path.join(DATA_DIR, "long_term_memory_{}.txt")
 USER_NAMES_FILE = os.path.join(DATA_DIR, "user_names.json")
+FAISS_INDEX_PATH = "./data/faiss_index.bin"
 
 # 读取配置文件
 test_config = {}
@@ -58,9 +59,27 @@ else:
 
 # 配置参数
 MAX_CONTEXT_MESSAGES = 6
+DIMENSION = 256  # 默认向量维度
+
+MAX_CONTEXT_TOKENS = 1400
+MEMORY_THRESHOLD = 150
+
+MONGODB_URI = test_config.get("mongodb_url", "")
+MONGODB_USERNAME = test_config.get("mongodb_username", "")
+MONGODB_PASSWORD = test_config.get("mongodb_password", "")
+
+ELASTICSEARCH_URL = test_config.get("elasticsearch_url", "")
+ELASTICSEARCH_USERNAME = test_config.get("elasticsearch_username", "")
+ELASTICSEARCH_PASSWORD = test_config.get("elasticsearch_password", "")
+
 OPENAI_SECRET = test_config.get("openai_secret", "")
 OPENAI_MODEL = test_config.get("openai_model", "gpt-4o-mini")
 OPENAI_API_URL = test_config.get("openai_api_url", "https://api.openai-hk.com/v1/chat/completions")
+
+# TEA_URL = test_config.get("tea_url", "")
+# TEA_SECRET = test_config.get("tea_secret", "")
+# TEA_MODEL = test_config.get("tea_model", "gpt-4o-mini")
+
 ADMIN_ID = test_config.get("admin_id", "")
 
 # KEEP_ALIVE 配置
@@ -72,6 +91,12 @@ LOG_LEVEL = test_config.get("log_level", "INFO").upper()
 DEBUG_MODE = test_config.get("debug", False)
 
 # 验证关键配置
+if not MONGODB_USERNAME:
+    logger.warning("MongoDB 用户名缺失,请检查 config.yaml 文件")
+if not MONGODB_PASSWORD:
+    logger.warning("MongoDB 密码缺失,请检查 config.yaml 文件")
+if not MONGODB_URI:
+    logger.warning("MongoDB URI 缺失,请检查 config.yaml 文件")
 if not OPENAI_SECRET:
     logger.warning("OpenAI API 密钥缺失,请检查 config.yaml 文件")
 if not OPENAI_MODEL:
