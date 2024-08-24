@@ -58,10 +58,7 @@ else:
     exit(1)
 
 # 配置参数
-MAX_CONTEXT_MESSAGES = 6
-DIMENSION = 256  # 默认向量维度
-
-MAX_CONTEXT_TOKENS = 1400
+MAX_CONTEXT_TOKENS = 2400
 MEMORY_THRESHOLD = 150
 
 MONGODB_URI = test_config.get("mongodb_url", "")

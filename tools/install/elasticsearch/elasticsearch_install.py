@@ -244,19 +244,28 @@ def install_elasticsearch_on_linux(os_version: str):
 
         if "ubuntu" in distro_name or "debian" in distro_name:
             print("> 正在导入 GPG 密钥并添加 Elasticsearch 仓库源...")
+            # 导入GPG密钥
             subprocess.run(
-                ["wget", "-qO", "-", "https://artifacts.elastic.co/GPG-KEY-elasticsearch", "|", "gpg", "--dearmor",
-                 "-o", "/usr/share/keyrings/elasticsearch-keyring.gpg"], check=True)
-            subprocess.run(["echo",
-                            "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://mirrors.tuna.tsinghua.edu.cn/elasticstack/8.x/apt/ stable main",
-                            "|", "sudo", "tee", "/etc/apt/sources.list.d/elastic-8.x.list"], check=True)
+                ["wget", "-qO", "-", "https://artifacts.elastic.co/GPG-KEY-elasticsearch", "|", "sudo", "apt-key", "add", "-"],
+                shell=True,
+                check=True
+            )
+            # 添加 Elasticsearch软件源
+            subprocess.run(
+                ["sudo", "sh", "-c",
+                 'echo "deb https://artifacts.elastic.co/packages/7.x/apt stable main" > /etc/apt/sources.list.d/elastic-7.x.list'],
+                check=True
+            )
+            # 更新软件包列表并安装 Elasticsearch
             subprocess.run(["sudo", "apt-get", "update"], check=True)
             subprocess.run(["sudo", "apt-get", "install", "-y", "elasticsearch"], check=True)
 
+            # 启动并设置 Elasticsearch 开机自启
+            subprocess.run(["sudo", "systemctl", "enable", "--now", "elasticsearch.service"], check=True)
+
         elif "centos" in distro_name or "rhel" in distro_name or "fedora" in distro_name:
             print("> 正在导入 GPG 密钥并添加 Elasticsearch 仓库源...")
-            subprocess.run(["sudo", "rpm", "--import", "https://artifacts.elastic.co/GPG-KEY-elasticsearch"],
-                           check=True)
+            subprocess.run(["sudo", "rpm", "--import", "https://artifacts.elastic.co/GPG-KEY-elasticsearch"], check=True)
             subprocess.run(["sudo", "yum", "install", "-y",
                             "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.15.0-x86_64.rpm"],
                            check=True)
@@ -266,6 +275,10 @@ def install_elasticsearch_on_linux(os_version: str):
             sys.exit(1)
 
         print("> Elasticsearch安装完成。")
+
+    except subprocess.CalledProcessError as e:
+        print(f"! 安装Elasticsearch时出错：{e}")
+        sys.exit(1)
 
     except subprocess.CalledProcessError as e:
         print(f"! 安装Elasticsearch时出错：{e}")
