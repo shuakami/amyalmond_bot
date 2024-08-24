@@ -155,18 +155,28 @@ class MessageHandler:
 
                     # 处理长记忆的情况
                     if "<get memory>" in reply_content:
-                        _log.debug("检测到 <get memory> 标记，正在读取长记忆...")
-                        long_term_memory = await self.memory_manager.read_long_term_memory(group_id)
-                        user_input_with_memory = f"{formatted_message}\n{long_term_memory}"
-                        reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
+                        _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
+
+                        # [新方法] 检索记忆
+                        long_term_memory = await self.memory_manager.retrieve_memory(group_id, cleaned_content)
+
+                        if long_term_memory:
+                            user_input_with_memory = f"{formatted_message}\n{long_term_memory['content']}"
+                            reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
+                        else:
+                            _log.warning(f"未能检索到相关的长记忆，继续处理当前对话。")
 
                     # 提取并存储新记忆内容
                     if reply_content is not None:
                         _log.debug("提取新记忆内容...")
                         memory_content = extract_memory_content(reply_content)
-                        if memory_content and memory_content not in context:
+                        if memory_content:
                             _log.debug(f"存储新的记忆内容: {memory_content}")
-                            await self.memory_manager.append_to_long_term_memory(group_id, memory_content)
+
+                            # [新方法] 存储记忆
+                            await self.memory_manager.store_memory(group_id, message, "assistant", memory_content)
+
+                            # 清除回复内容中的<memory>标记
                             reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
 
                     # 生成并发送回复消息，包含消息处理时间
