@@ -1,6 +1,3 @@
-# core/db/install/mongodb/mongodb_install.py
-# MongoDB安装脚本
-
 import ctypes
 import os
 import platform
@@ -11,11 +8,24 @@ import urllib.request
 import distro
 from tqdm import tqdm
 
-from core.db.setup.mongodb.mongodb_setup_configs import configure_mongodb
-from core.utils.logger import get_logger
-from core.utils.utils import detect_os_and_version
+# 手动指定项目根目录
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# 将项目根目录添加到 Python 的搜索路径中
+sys.path.append(project_root)
+from tools.setup.mongodb.mongodb_setup_configs import configure_mongodb
 
-_log = get_logger()
+
+def detect_os_and_version():
+    os_name = platform.system()
+    if os_name == "Windows":
+        os_version = platform.version()
+    elif os_name == "Linux":
+        os_version = platform.release()
+    elif os_name == "Darwin":
+        os_version = platform.mac_ver()[0]
+    else:
+        os_name, os_version = None, None
+    return os_name, os_version
 
 
 def show_windows_message(title, message):
@@ -31,10 +41,10 @@ def download_and_install_mongodb(os_name: str, os_version: str):
         elif os_name == "Darwin":
             install_mongodb_on_mac(os_version)
         else:
-            _log.error(f"不支持的操作系统：{os_name}")
+            print(f"! 不支持的操作系统：{os_name}")
             sys.exit(1)
     except Exception as e:
-        _log.error(f"在 {os_name} {os_version} 上安装MongoDB失败：{e}")
+        print(f"! 在 {os_name} {os_version} 上安装MongoDB失败：{e}")
         sys.exit(1)
 
 
@@ -56,23 +66,23 @@ def show_progress_bar(url, path):
 
 def install_mongodb_on_windows():
     if check_mongodb_installed():
-        _log.info("MongoDB 已经安装，无需再次安装。")
+        print("> MongoDB 已经安装，无需再次安装。")
         return
 
     installer_path = "mongodb_installer.msi"
 
     try:
-        _log.info(f"检测路径：{os.path.abspath(installer_path)}")
+        print(f"> 检测路径：{os.path.abspath(installer_path)}")
         if os.path.exists(installer_path) and 500 * 1024 * 1024 <= os.path.getsize(installer_path) <= 650 * 1024 * 1024:
-            _log.info("检测到现有的 MongoDB 安装文件，可以直接安装。")
+            print("> 检测到现有的 MongoDB 安装文件，可以直接安装。")
         else:
-            _log.info("未找到有效的 MongoDB 安装文件，正在从官方渠道下载...")
+            print("> 未找到有效的 MongoDB 安装文件，正在从官方渠道下载...")
             download_url = "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-7.2.0-signed.msi"
             show_progress_bar(download_url, installer_path)
 
-        _log.info("开始交互式安装 MongoDB...")
+        print("> 开始交互式安装 MongoDB...")
 
-        _log.info("提示用户安装即将开始...")
+        print("> 提示用户安装即将开始...")
         show_windows_message(
             "MongoDB 安装提示",
             "即将打开 MongoDB 安装程序。"
@@ -144,19 +154,17 @@ def install_mongodb_on_windows():
         input("如果您已完成安装，请按回车确认：")
 
         if check_mongodb_installed():
-            _log.info("MongoDB 安装成功！您已打败全国99.9%的用户！")
+            print("> MongoDB 安装成功！您已打败全国99.9%的用户！")
             show_windows_message("MongoDB 安装成功", "MongoDB 已成功安装并正在运行。")
-            _log.info("帮助您启动配置脚本.....")
+            print("> 帮助您启动配置脚本.....")
             # 启动配置脚本
             configure_mongodb()
         else:
-            _log.error("MongoDB 安装失败。")
-
-
+            print("! MongoDB 安装失败。")
             show_windows_message("MongoDB 安装失败", "MongoDB 安装失败，请检查日志并尝试重新安装。")
 
     except Exception as e:
-        _log.error(f"交互式安装过程中发生了错误：{e}")
+        print(f"! 交互式安装过程中发生了错误：{e}")
         show_windows_message("安装错误", f"安装过程中发生错误：{e}")
 
 
@@ -165,14 +173,13 @@ def check_mongodb_installed():
         if platform.system() == "Windows":
             # Windows 下的检测逻辑
             result = subprocess.run(["sc", "query", "MongoDB"], capture_output=True, text=True)
-            _log.info(f"检查 MongoDB 服务状态：{result.stdout}")
+            print(f"> 检查 MongoDB 服务状态：{result.stdout}")
             if "RUNNING" in result.stdout:
                 return True
 
             default_install_path = r"C:\Program Files\MongoDB\Server\7.0\bin"
             if os.path.exists(default_install_path):
-                # 打印日志
-                _log.info(f"检查默认安装路径：{default_install_path}")
+                print(f"> 检查默认安装路径：{default_install_path}")
                 return True
 
         elif platform.system() == "Linux":
@@ -193,11 +200,11 @@ def check_mongodb_installed():
         # 检查环境变量中是否能找到 mongo 命令
         result = subprocess.run(["mongo", "--version"], capture_output=True, text=True)
         if result.returncode == 0 and "MongoDB" in result.stdout:
-            _log.info(f"检查环境变量：{result.stdout}")
+            print(f"> 检查环境变量：{result.stdout}")
             return True
 
     except Exception as e:
-        _log.error(f"检查 MongoDB 安装状态时出错：{e}")
+        print(f"! 检查 MongoDB 安装状态时出错：{e}")
 
     return False
 
@@ -205,41 +212,41 @@ def check_mongodb_installed():
 def install_mongodb_on_linux(os_version: str):
     try:
         distro_name = distro.id()
-        _log.info(f"检测到的Linux发行版: {distro_name} {os_version}")
+        print(f"> 检测到的Linux发行版: {distro_name} {os_version}")
 
         if "ubuntu" in distro_name or "debian" in distro_name:
-            _log.info("正在更新软件包列表并安装 MongoDB（基于Debian）...")
+            print("> 正在更新软件包列表并安装 MongoDB（基于Debian）...")
             subprocess.run(["sudo", "apt-get", "update"], check=True)
             subprocess.run(["sudo", "apt-get", "install", "-y", "mongodb-org"], check=True)
 
         elif "centos" in distro_name or "rhel" in distro_name or "fedora" in distro_name:
-            _log.info("正在刷新缓存并安装 MongoDB（基于RHEL）...")
+            print("> 正在刷新缓存并安装 MongoDB（基于RHEL）...")
             subprocess.run(["sudo", "yum", "makecache"], check=True)
             subprocess.run(["sudo", "yum", "install", "-y", "mongodb-org"], check=True)
 
         else:
-            _log.error(f"未支持的 Linux 发行版: {distro_name}")
+            print(f"! 未支持的 Linux 发行版: {distro_name}")
             sys.exit(1)
 
-        _log.info("MongoDB安装完成。")
+        print("> MongoDB安装完成。")
 
     except subprocess.CalledProcessError as e:
-        _log.error(f"安装MongoDB时出错：{e}")
+        print(f"! 安装MongoDB时出错：{e}")
         sys.exit(1)
 
 
 def install_mongodb_on_mac(os_version: str):
     try:
-        _log.info(f"检测到的macOS版本: {os_version}")
-        _log.info("正在使用Homebrew安装MongoDB...")
+        print(f"> 检测到的macOS版本: {os_version}")
+        print("> 正在使用Homebrew安装MongoDB...")
 
         subprocess.run(["brew", "tap", "mongodb/brew"], check=True)
         subprocess.run(["brew", "install", "mongodb-community"], check=True)
 
-        _log.info("MongoDB安装完成。")
+        print("> MongoDB安装完成。")
 
     except subprocess.CalledProcessError as e:
-        _log.error(f"安装MongoDB时出错：{e}")
+        print(f"! 安装MongoDB时出错：{e}")
         sys.exit(1)
 
 
@@ -247,8 +254,8 @@ if __name__ == "__main__":
     os_name, os_version = detect_os_and_version()
 
     if not os_name or not os_version:
-        _log.error("无法检测操作系统或版本。")
+        print("! 无法检测操作系统或版本。")
         sys.exit(1)
 
-    _log.info(f"开始为 {os_name} {os_version} 安装MongoDB...")
+    print(f"> 开始为 {os_name} {os_version} 安装MongoDB...")
     download_and_install_mongodb(os_name, os_version)

@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Alpha_823006)
+Version: 1.2.0 (Beta_824001)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """

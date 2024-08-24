@@ -2,11 +2,11 @@
 AmyAlmond Plugins - core/plugins/custom_reply/custom_reply.py
 """
 import random
-import os
 from core.plugins import Plugin
-from core.plugins.tools.plugin_utils import load_plugin_config, get_plugin_logger
+from core.plugins.tools.plugin_utils import load_plugin_config
+from core.utils.logger import get_logger
 
-logger = get_plugin_logger()
+logger = get_logger()
 
 
 class CustomReplyPlugin(Plugin):

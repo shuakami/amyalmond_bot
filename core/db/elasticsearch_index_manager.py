@@ -28,6 +28,7 @@ class ElasticsearchIndexManager:
         初始化ElasticsearchIndexManager实例并连接到Elasticsearch服务器
         """
         try:
+
             self.es = Elasticsearch(
                 [ELASTICSEARCH_URL],
                 http_auth=(ELASTICSEARCH_USERNAME, ELASTICSEARCH_PASSWORD),

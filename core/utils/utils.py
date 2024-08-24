@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Alpha_823006)
+Version: 1.2.0 (Beta_824001)
 
 utils.py - 工具函数模块
 """

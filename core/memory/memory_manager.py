@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Alpha_823006)
+Version: 1.2.0 (Beta_824001)
 
 memory_manager.py 包含管理消息历史和记忆存储的主要类和方法，支持MongoDB Full-Text Search+Elasticsearch以及智能记忆管理。
 """
@@ -87,7 +87,7 @@ class MemoryManager:
 
         if token_count > MAX_CONTEXT_TOKENS:
             summary = await get_gpt_response(
-                list(valid_message_history), "你是高级算法机器，请在不忽略关键人名或数据的情况下总结全部对话。"
+                list(valid_message_history), "你是高级算法机器，请在不忽略关键人名或数据以及细节的情况下总结无损压缩对话（20-40字）。"
             )
             compressed_history = [{"role": "assistant", "content": summary}]
 
@@ -236,9 +236,9 @@ class MemoryManager:
 
     async def semantic_analysis(self, query):
         """使用LLM进行语义分析,提取关键概念"""
-        system_prompt = "你是一个语义分析专家。请分析以下查询，提取出3-5个关键概念，用逗号分隔。"
+        system_prompt = "你是一个语义分析专家。请分析以下查询，提取出3-4个词，和一段推算搜索的语句（5-12字），用逗号分隔。你的所有结果都会带入对话数据库搜索，所以请尽量想象当时对话的上下文。"
         context = []  # 这里可以是空列表，因为我们不需要之前的对话上下文
-        user_input = f"请分析以下查询,提取出3-5个关键概念,用逗号分隔:\n{query}"
+        user_input = f"{query}"
 
         response = await self.openai_client.get_response(context=context, user_input=user_input,
                                                          system_prompt=system_prompt)

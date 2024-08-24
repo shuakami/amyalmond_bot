@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/17 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Alpha_823006)
+Version: 1.2.0 (Beta_824001)
 
 llm_client.py - 定义了 LLM 客户端接口。
 """

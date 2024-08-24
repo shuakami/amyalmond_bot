@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Alpha_823006)
+Version: 1.2.0 (Beta_824001)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
@@ -65,95 +65,107 @@ class MessageHandler:
 
         # 检查消息是否已处理
         if message_id in self.processed_messages:
-            _log.info(f"Message {message_id} has already been processed. Skipping.")
+            _log.info(f"消息 {message_id} 已经处理过，跳过。")
             return
 
-        _log.info(f"Received message: '{cleaned_content}' from user: {user_name}({user_id}) in group: {group_id}")
+        _log.info(f"收到来自用户 {user_name}({user_id}) 在群组 {group_id} 中的消息: '{cleaned_content}'")
 
         # 添加消息ID到已处理集合中
         self.processed_messages.add(message_id)
 
         # 清理过期的消息ID以避免集合过大
         if len(self.processed_messages) > 1000:
+            _log.debug("正在清理过期的消息ID...")
             self.processed_messages = set(list(self.processed_messages)[-500:])
 
         # 为新的群组初始化队列和锁
         if group_id not in self.message_queues:
+            _log.debug(f"初始化群组 {group_id} 的消息队列和锁...")
             self.message_queues[group_id] = asyncio.Queue()
             self.locks[group_id] = asyncio.Semaphore(1)
 
         # 将消息放入对应群组的队列中
         await self.message_queues[group_id].put((user_name, cleaned_content, message))
-
-        # 为新的群组初始化队列和信号量
-        if group_id not in self.message_queues:
-            self.message_queues[group_id] = asyncio.Queue()
-            self.locks[group_id] = asyncio.Semaphore(1)  # 使用 asyncio.Semaphore
+        _log.debug(f"消息已加入群组 {group_id} 的队列")
+        await self.process_message_queue(group_id)
 
     async def process_message_queue(self, group_id):
         async with self.locks[group_id]:  # 确保同一时间只有一个任务在处理该群组的消息
+            _log.debug(f"开始处理群组 {group_id} 的消息队列...")
             while not self.message_queues[group_id].empty():
                 user_name, cleaned_content, message = await self.message_queues[group_id].get()
 
                 try:
-                    _log.info(f"Processing message from queue for group {group_id}: {cleaned_content}")
+                    _log.info(f"正在处理来自群组 {group_id} 的消息: {cleaned_content}")
 
                     # 处理管理员指令
                     if message.author.member_openid == self.client.ADMIN_ID:
                         if cleaned_content.strip().lower() == "restart":
+                            _log.info("收到管理员指令: 重启")
                             await self.client.restart_bot(group_id, message.id)
                             continue
                         elif cleaned_content.strip().lower() == "reload":
+                            _log.info("收到管理员指令: 重新加载")
                             await self.client.hot_reload(group_id, message.id)
                             continue
 
                     # 处理新用户注册
                     if not is_user_registered(message.author.member_openid):
+                        _log.info(f"用户 {message.author.member_openid} 尚未注册，正在处理注册...")
                         await self.handle_new_user_registration(group_id, message.author.member_openid, cleaned_content,
                                                                 message.id)
                         continue
 
+                    _log.debug(f"正在压缩群组 {group_id} 的消息历史...")
                     context = await self.memory_manager.compress_memory(group_id, self.client.get_gpt_response)
 
                     # 将用户消息添加到历史记录中
                     formatted_message = f"{user_name}: {cleaned_content}"
+                    _log.debug(f"添加消息到历史记录: {formatted_message}")
                     self.memory_manager.add_message_to_history(group_id, {"role": "user", "content": formatted_message})
 
                     # 动态消息队列长度调整 - 基于Token计数
                     current_token_count = calculate_token_count(context)
+                    _log.debug(f"当前Token计数: {current_token_count}")
                     while current_token_count > MAX_CONTEXT_TOKENS:
                         context = context[1:]  # 移除最早的一条消息
                         current_token_count = calculate_token_count(context)
+                        _log.debug(f"移除最早消息后Token计数: {current_token_count}")
 
                     # 检查是否需要插入记忆
                     if not self.is_critical_context_present(context, cleaned_content):
-                        # 查询记忆
+                        _log.debug("正在检索相关记忆...")
                         memory_to_insert = await self.memory_manager.retrieve_memory(group_id, cleaned_content)
                         if memory_to_insert:
-                            # 确保消息队列中没有相关记忆，避免重复
+                            _log.debug("找到相关记忆，准备插入上下文...")
                             if not any(mem['content'] == memory_to_insert['content'] for mem in context):
                                 insert_position = random.randint(0, len(context))
                                 context.insert(insert_position, memory_to_insert)
-                                _log.info(f"Inserted memory into context at position {insert_position}")
+                                _log.info(f"记忆插入到上下文位置: {insert_position}")
 
                     # 获取 LLM 的回复
                     context = [msg for msg in context if msg.get('content') and msg['content'].strip()]
+                    _log.debug("正在获取LLM回复...")
                     reply_content = await self.client.get_gpt_response(context, formatted_message)
 
                     # 如果获取 LLM 回复失败，则跳过当前消息的处理
                     if reply_content is None:
+                        _log.warning("未能获取LLM回复，跳过此消息的处理")
                         continue
 
                     # 处理长记忆的情况
                     if "<get memory>" in reply_content:
+                        _log.debug("检测到 <get memory> 标记，正在读取长记忆...")
                         long_term_memory = await self.memory_manager.read_long_term_memory(group_id)
                         user_input_with_memory = f"{formatted_message}\n{long_term_memory}"
                         reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
 
                     # 提取并存储新记忆内容
                     if reply_content is not None:
+                        _log.debug("提取新记忆内容...")
                         memory_content = extract_memory_content(reply_content)
                         if memory_content and memory_content not in context:
+                            _log.debug(f"存储新的记忆内容: {memory_content}")
                             await self.memory_manager.append_to_long_term_memory(group_id, memory_content)
                             reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
 
@@ -162,11 +174,12 @@ class MessageHandler:
                     plugin_placeholder = "<!-- Plugin Content -->"
                     reply_message = f"{reply_message_content}\n---\n{plugin_placeholder}"
 
-                    _log.debug(f"Before plugin: {reply_message}")
+                    _log.debug(f"插件处理前的消息: {reply_message}")
                     reply_message = await self.client.process_plugins(message, reply_message)
-                    _log.debug(f"After plugin: {reply_message}")
+                    _log.debug(f"插件处理后的消息: {reply_message}")
 
                     # 发送最终的回复消息
+                    _log.debug(f"发送回复消息到群组 {group_id}: {reply_message}")
                     message_reference = Reference(message_id=message.id, ignore_get_message_error=True)
                     await self.client.api.post_group_message(
                         group_openid=group_id,
@@ -176,12 +189,15 @@ class MessageHandler:
                     )
 
                     # 将用户消息和机器人的回复存储到数据库
+                    _log.debug("正在存储用户消息到数据库...")
                     await self.memory_manager.store_memory(group_id, message, "user", formatted_message)
+                    _log.debug("正在存储机器人回复到数据库...")
                     await self.memory_manager.store_memory(group_id, message, "assistant", reply_content)
 
                 except Exception as e:
-                    _log.error(f"Error processing message for group {group_id}: {e}", exc_info=True)
+                    _log.error(f"处理群组 {group_id} 的消息时出错: {e}", exc_info=True)
                 finally:
+                    _log.debug(f"消息处理完成，标记任务完成")
                     self.message_queues[group_id].task_done()
 
     @staticmethod
