@@ -10,6 +10,8 @@ Version: 1.2.0 (Beta_824001)
 memory_manager.py 包含管理消息历史和记忆存储的主要类和方法，支持MongoDB Full-Text Search+Elasticsearch以及智能记忆管理。
 """
 import random
+from datetime import datetime, timedelta
+
 import jieba.analyse
 
 from collections import deque
@@ -39,18 +41,20 @@ class MemoryManager:
         self.es_manager = ElasticsearchIndexManager()  # 初始化Elasticsearch管理器
         self.inject_client = InjectMemoryClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)  # 初始化注入记忆的LLM客户端
         self.openai_client = OpenAIClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)
+        self.memory_usage = {}  # 跟踪每条记忆的使用频率和时间
 
     def add_message_to_history(self, group_id, message):
-        """
-        添加一条消息到指定群组的消息历史中
-
-        参数:
-            group_id (str): 群组的唯一标识符
-            message (dict): 包含角色和内容的消息字典
-        """
+        """添加一条消息到指定群组的消息历史中"""
         if group_id not in self.message_history:
             self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
         self.message_history[group_id].append(message)
+
+        # 更新记忆使用频率
+        message_id = f"{group_id}_{message['role']}_{hash(message['content'])}"
+        if message_id in self.memory_usage:
+            self.memory_usage[message_id]['frequency'] += 1
+        else:
+            self.memory_usage[message_id] = {'frequency': 1, 'last_used': datetime.now()}
 
     def get_message_history(self, group_id):
         """
@@ -64,30 +68,46 @@ class MemoryManager:
         """
         return self.message_history.get(group_id, deque(maxlen=MAX_CONTEXT_TOKENS))
 
+    def forget_memories(self):
+        """定期调用该函数以遗忘低频率使用的记忆"""
+        threshold_date = datetime.now() - timedelta(days=14)  # 保留14天内的记忆
+        for message_id, usage_data in list(self.memory_usage.items()):
+            # 处理没有时间戳的记录
+            if 'last_used' not in usage_data:
+                if usage_data['frequency'] <= 3:
+                    group_id, role, _ = message_id.split('_')
+                    self._remove_message_from_history(group_id, role, usage_data)
+                    del self.memory_usage[message_id]
+                    _log.debug(f"移除没有时间戳且使用频率低的消息: {message_id}")
+            # 处理有时间戳的记录
+            elif usage_data['frequency'] <= 3 and usage_data['last_used'] < threshold_date:
+                group_id, role, _ = message_id.split('_')
+                self._remove_message_from_history(group_id, role, usage_data)
+                del self.memory_usage[message_id]
+                _log.info(f"移除超过14天且使用频率低的消息: {message_id}")
+
+    def _remove_message_from_history(self, group_id, role, usage_data):
+        """从消息历史中移除指定的消息"""
+        if group_id in self.message_history:
+            self.message_history[group_id] = deque(
+                [msg for msg in self.message_history[group_id] if not (
+                        msg['role'] == role and hash(msg['content']) == usage_data.get('last_used',
+                                                                                       hash(msg['content'])))],
+                maxlen=MAX_CONTEXT_TOKENS)
+
     async def compress_memory(self, group_id, get_gpt_response):
-        """
-        压缩消息历史以减少内存占用，如果消息历史超过最大允许Token数，将使用 GPT 生成摘要并替换历史记录
-
-        参数:
-            group_id (str): 群组的唯一标识符
-            get_gpt_response (function): 用于获取 GPT 回复的函数
-
-        返回:
-            list: 压缩后的消息历史
-        """
+        """压缩消息历史以减少内存占用"""
         message_history = self.get_message_history(group_id)
 
-        # 过滤掉没有 'content' 键的消息
+        # 过滤掉没有 'content' 的消息
         valid_message_history = [msg for msg in message_history if 'content' in msg and msg['content'].strip()]
 
         token_count = sum(len(msg['content']) for msg in valid_message_history)
 
-        # 创建新的列表来存储压缩后的消息历史记录
-        compressed_history = valid_message_history
-
         if token_count > MAX_CONTEXT_TOKENS:
             summary = await get_gpt_response(
-                list(valid_message_history), "你是高级算法机器，请在不忽略关键人名或数据以及细节的情况下总结无损压缩对话（20-40字）。"
+                list(valid_message_history),
+                "你是一个高级记忆管理算法。请在不忽略任何关键人物、数据或细节的情况下，将下列对话无损压缩为简明扼要的条目。每一条记忆请保持独立，明确记录说话者身份，并优先保留频率较高的重要信息。压缩后的结果应为一组分条列出的简要总结（每条20-40字），以确保关键信息不会丢失。注意：这些条目将用于进一步的记忆管理和遗忘机制，因此需要确保压缩后的信息依然具有高价值，并能有效减少低频次、不重要内容的堆积。"
             )
             compressed_history = [{"role": "assistant", "content": summary}]
 
@@ -95,7 +115,9 @@ class MemoryManager:
             await self.store_memory(group_id, None, "assistant", summary)
             _log.info(f"压缩群组 {group_id} 的消息历史，摘要内容：{summary}")
 
-        return compressed_history
+            return compressed_history
+
+        return valid_message_history
 
     async def store_memory(self, group_id, message, role, content):
         """
@@ -136,11 +158,28 @@ class MemoryManager:
 
             # 从MongoDB加载消息历史
             conversations = self.mongo.find_all_conversations()
+            _log.debug(f"MongoDB消息历史: {conversations}")
             for conversation in conversations:
                 group_id = conversation.get('group_id')
+                if group_id is None:
+                    _log.warning(f"发现没有group_id的MongoDB记录: {conversation}，跳过该记录")
+                    continue  # 跳过没有group_id的记录
+
+                # 自动修复：如果缺少role或content字段，则添加默认值
+                if 'role' not in conversation:
+                    conversation['role'] = 'unknown'
+                    _log.warning(f"MongoDB记录缺少role字段，已自动修复: {conversation}")
+                if 'content' not in conversation:
+                    conversation['content'] = ''
+                    _log.warning(f"MongoDB记录缺少content字段，已自动修复: {conversation}")
+
+                # 使用字典存储每个群组的消息历史
                 if group_id not in self.message_history:
                     self.message_history[group_id] = deque(maxlen=MAX_CONTEXT_TOKENS)
-                self.message_history[group_id].append(conversation.get('message', {}))
+                self.message_history[group_id].append({
+                    "role": conversation['role'],
+                    "content": conversation['content']
+                })
 
             _log.debug(f"MongoDB消息历史: {conversations}")
             _log.info("MongoDB消息历史加载完成。")
@@ -168,6 +207,15 @@ class MemoryManager:
                     "content": conversation.get('content')
                 })
 
+                # 更新 memory_usage 数据，处理可能没有时间戳的记录
+                if conversation:
+                    message_id = f"{group_id}_{conversation.get('role')}_{hash(conversation.get('content'))}"
+                    if message_id not in self.memory_usage:
+                        self.memory_usage[message_id] = {
+                            'frequency': 1,
+                            'last_used': conversation.get('last_used', datetime.now())  # 使用当前时间作为默认时间戳
+                        }
+
             _log.debug(f"Elasticsearch消息历史: {es_conversations}")
             _log.info("Elasticsearch消息历史加载完成。")
 
@@ -190,11 +238,16 @@ class MemoryManager:
 
             if basic_results:
                 sorted_results = self.sort_results_by_relevance(query, basic_results)
-                _log.info(f"排序后的搜索结果: {sorted_results}")
-                return {"role": "system", "content": f"相关记忆: {sorted_results[0]['content']}"}
-            else:
-                _log.info("未找到相关记忆")
-                return None
+                # 更新记忆使用频率
+                for result in sorted_results:
+                    message_id = f"{group_id}_{result['role']}_{hash(result['content'])}"
+                    # 检查记忆是否存在
+                    if message_id in self.memory_usage:
+                        self.memory_usage[message_id]['frequency'] += 1
+                        self.memory_usage[message_id]['last_used'] = datetime.now()
+                    else:
+                        # 如果不存在，则创建新的记录
+                        self.memory_usage[message_id] = {'frequency': 1, 'last_used': datetime.now()}
 
         except Exception as e:
             _log.error(f"检索记忆时发生错误: {e}", exc_info=True)

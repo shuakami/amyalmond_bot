@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/24 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_824001)
+Version: 1.2.0 (Beta_826010)
 
 logger.py 用于日志记录
 """

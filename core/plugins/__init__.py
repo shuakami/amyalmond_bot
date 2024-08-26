@@ -26,8 +26,9 @@ class Plugin:
 
         参数:
             message (Message): 收到的消息对象
+            reply_content (str): 待处理的回复内容
         """
-        pass
+        return reply_content
 
     async def on_ready(self):
         """

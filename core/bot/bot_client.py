@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 16:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_824001)
+Version: 1.2.0 (Beta_826010)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -17,6 +17,7 @@ import watchdog.observers
 import botpy
 from botpy.message import GroupMessage
 
+from core.plugins.plugin_manager import PluginManager
 # user_management.py模块 - <用户管理模块化文件>
 from core.utils.user_management import load_user_names
 # utils.py模块 - <工具模块化文件>
@@ -54,6 +55,16 @@ class MyClient(botpy.Client):
         初始化文件系统观察器以监听配置文件变化
         """
         super().__init__(*args, **kwargs)
+        # 初始化插件管理器
+        self.plugin_manager = PluginManager(self)
+
+        # 初始化 LLM 客户端
+        llm_factory = LLMFactory()
+        self.llm_client = llm_factory.create_llm_client()
+
+        # 加载插件
+        self.plugin_manager.register_plugins()
+
         self.pending_users = {}
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
         self.memory_manager = MemoryManager()
@@ -84,42 +95,14 @@ class MyClient(botpy.Client):
         self.observer.schedule(event_handler, path='.', recursive=False)
         self.observer.start()
 
-        # 初始化插件系统
-        self.on_message_handlers = []
-        self.on_ready_handlers = []
-        self.plugins = []
-
-        # 初始化 LLM 客户端
-        llm_factory = LLMFactory()
-        self.llm_client = llm_factory.create_llm_client()
-
-    async def process_plugins(self, message: botpy.message, reply_content: str) -> str:
-        """
-        调用所有已启用的插件处理回复内容。
-
-        Args:
-            message (botpy.Message): 接收到的原始消息对象。
-            reply_content (str): 待处理的回复内容字符串。
-
-        Returns:
-            str: 处理后的回复内容字符串。
-        """
-        for plugin in self.plugins:
-            reply_content = await plugin.on_message(message, reply_content)
-        return reply_content
-
-    def register_event_handler(self, handler, event_type):
-        """
-        注册事件处理方法
-
-        Args:
-            handler (function): 事件处理方法
-            event_type (str): 事件类型
-        """
-        if event_type == "on_message":
-            self.on_message_handlers.append(handler)
-        elif event_type == "on_ready":
-            self.on_ready_handlers.append(handler)
+        # # 初始化插件系统
+        # self.on_message_handlers = []
+        # self.on_ready_handlers = []
+        # self.plugins = []
+        #
+        # # 初始化 LLM 客户端
+        # llm_factory = LLMFactory()
+        # self.llm_client = llm_factory.create_llm_client()
 
     async def on_message(self, message: botpy.message):
         """
@@ -128,8 +111,8 @@ class MyClient(botpy.Client):
         Args:
             message (botpy.Message): 收到的消息对象
         """
-        for handler in self.on_message_handlers:
-            await handler(message)
+        # 通过事件总线发布 on_message 事件，让所有订阅的插件处理该消息
+        await self.plugin_manager.event_bus.publish("on_message", message)
 
     def load_system_prompt(self):
         """
@@ -160,9 +143,8 @@ class MyClient(botpy.Client):
         # 启动 Keep-Alive 任务
         await asyncio.create_task(keep_alive(self.openai_api_url, self.openai_secret))
 
-        # 调用插件的 on_ready 方法
-        for handler in self.on_ready_handlers:
-            await handler()
+        # 通知插件准备就绪
+        await self.plugin_manager.on_ready()
 
     async def on_group_at_message_create(self, message: GroupMessage):
         """

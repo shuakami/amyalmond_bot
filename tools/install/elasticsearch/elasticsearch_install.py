@@ -280,9 +280,7 @@ def install_elasticsearch_on_linux(os_version: str):
         print(f"! 安装Elasticsearch时出错：{e}")
         sys.exit(1)
 
-    except subprocess.CalledProcessError as e:
-        print(f"! 安装Elasticsearch时出错：{e}")
-        sys.exit(1)
+
 
 
 def install_elasticsearch_on_mac(os_version: str):
