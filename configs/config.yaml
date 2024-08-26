@@ -1,7 +1,9 @@
 appid: "your QQ bot development AppID"
 secret: "your QQ bot development AppSecret"
+
 openai_secret: "OpenAI API key (or other service provider)"
 openai_model: "gpt-4o-mini"
 openai_api_url: "OpenAI API URL (or other service provider)"
+
 admin_id: "your identifier"
 llm_provider: openai

@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 12:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_824001)
+Version: 1.2.0 (Beta_826010)
 
 inject_memory_client.py - 实现与 LLM 交互的客户端，用于处理记忆提取和注入任务
 """

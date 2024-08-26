@@ -7,7 +7,7 @@ import importlib
 import inspect
 import traceback
 
-from core.bot.bot_client import MyClient
+# from core.bot.bot_client import MyClient
 from core.plugins import Plugin
 from core.utils.logger import get_logger
 
@@ -15,7 +15,8 @@ from core.utils.logger import get_logger
 logger = get_logger()
 
 
-def load_plugins(bot_client: MyClient):
+def load_plugins(bot_client):
+    from core.bot.bot_client import MyClient
     """
     加载插件
 

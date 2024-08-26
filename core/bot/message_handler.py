@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_824001)
+Version: 1.2.0 (Beta_826010)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
@@ -15,16 +15,18 @@ import random
 
 from botpy.message import GroupMessage
 from botpy.types.message import Reference
-from config import MAX_CONTEXT_TOKENS
 
-# user_management.py模块 - <用于用户内容清理、用户名获取、用户注册检查及新增用户处理>
-from core.utils.user_management import clean_content, get_user_name, is_user_registered, add_new_user
-# utils.py模块 - <从回复消息中提取记忆内容>
-from core.utils.utils import extract_memory_content, calculate_token_count
-# logger.py模块 - <日志记录模块>
-from core.utils.logger import get_logger
+from config import MAX_CONTEXT_TOKENS
+from core.bot.memory_utils import handle_long_term_memory, process_reply_content
+from core.bot.user_registration import handle_new_user_registration
 # elasticsearch_index_manager.py模块 - <用于与Elasticsearch交互>
 from core.db.elasticsearch_index_manager import ElasticsearchIndexManager
+# logger.py模块 - <日志记录模块>
+from core.utils.logger import get_logger
+# user_management.py模块 - <用于用户内容清理、用户名获取、用户注册检查及新增用户处理>
+from core.utils.user_management import clean_content, get_user_name, is_user_registered
+# utils.py模块 - <从回复消息中提取记忆内容>
+from core.utils.utils import calculate_token_count, extract_memory_content
 
 _log = get_logger()
 
@@ -84,6 +86,9 @@ class MessageHandler:
             self.message_queues[group_id] = asyncio.Queue()
             self.locks[group_id] = asyncio.Semaphore(1)
 
+        # 使用事件总线将消息发布出去，插件可以在此时对消息进行处理
+        await self.client.plugin_manager.event_bus.publish("before_message_queue", message, cleaned_content)
+
         # 将消息放入对应群组的队列中
         await self.message_queues[group_id].put((user_name, cleaned_content, message))
         _log.debug(f"消息已加入群组 {group_id} 的队列")
@@ -96,7 +101,8 @@ class MessageHandler:
                 user_name, cleaned_content, message = await self.message_queues[group_id].get()
 
                 try:
-                    _log.info(f"正在处理来自群组 {group_id} 的消息: {cleaned_content}")
+                    _log.info(
+                        f"正在处理来自群组 {user_name} ({message.author.member_openid}) 的消息: {cleaned_content}")
 
                     # 处理管理员指令
                     if message.author.member_openid == self.client.ADMIN_ID:
@@ -112,9 +118,13 @@ class MessageHandler:
                     # 处理新用户注册
                     if not is_user_registered(message.author.member_openid):
                         _log.info(f"用户 {message.author.member_openid} 尚未注册，正在处理注册...")
-                        await self.handle_new_user_registration(group_id, message.author.member_openid, cleaned_content,
-                                                                message.id)
+                        await handle_new_user_registration(self.client, group_id, message.author.member_openid,
+                                                           cleaned_content, message.id)
                         continue
+
+                    # 在处理消息之前，通过事件总线触发插件逻辑
+                    await self.client.plugin_manager.event_bus.publish("before_message_process", message,
+                                                                       cleaned_content)
 
                     _log.debug(f"正在压缩群组 {group_id} 的消息历史...")
                     context = await self.memory_manager.compress_memory(group_id, self.client.get_gpt_response)
@@ -143,6 +153,10 @@ class MessageHandler:
                                 context.insert(insert_position, memory_to_insert)
                                 _log.info(f"记忆插入到上下文位置: {insert_position}")
 
+                    # 在获取 LLM 回复之前，发布事件以允许插件进行处理
+                    await self.client.plugin_manager.event_bus.publish("before_llm_response", context,
+                                                                       formatted_message)
+
                     # 获取 LLM 的回复
                     context = [msg for msg in context if msg.get('content') and msg['content'].strip()]
                     _log.debug("正在获取LLM回复...")
@@ -156,10 +170,8 @@ class MessageHandler:
                     # 处理长记忆的情况
                     if "<get memory>" in reply_content:
                         _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
-
-                        # [新方法] 检索记忆
                         long_term_memory = await self.memory_manager.retrieve_memory(group_id, cleaned_content)
-
+                        _log.debug(f"检索到的长记忆: {long_term_memory}")  # 添加日志记录，输出检索到的长记忆内容
                         if long_term_memory:
                             user_input_with_memory = f"{formatted_message}\n{long_term_memory['content']}"
                             reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
@@ -172,20 +184,22 @@ class MessageHandler:
                         memory_content = extract_memory_content(reply_content)
                         if memory_content:
                             _log.debug(f"存储新的记忆内容: {memory_content}")
-
-                            # [新方法] 存储记忆
                             await self.memory_manager.store_memory(group_id, message, "assistant", memory_content)
 
                             # 清除回复内容中的<memory>标记
                             reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
 
                     # 生成并发送回复消息，包含消息处理时间
-                    reply_message_content = reply_content or '抱歉，我暂时无法回复你的消息'
-                    plugin_placeholder = "<!-- Plugin Content -->"
-                    reply_message = f"{reply_message_content}\n---\n{plugin_placeholder}"
+                    reply_message = reply_content or '抱歉，我暂时无法回复你的消息'
 
                     _log.debug(f"插件处理前的消息: {reply_message}")
-                    reply_message = await self.client.process_plugins(message, reply_message)
+
+                    # 使用事件总线调用插件处理回复消息
+                    plugin_result = await self.client.plugin_manager.event_bus.publish("before_send_reply", message,
+                                                                                       reply_message)
+                    if plugin_result is not None:
+                        reply_message = plugin_result
+
                     _log.debug(f"插件处理后的消息: {reply_message}")
 
                     # 发送最终的回复消息
@@ -209,6 +223,10 @@ class MessageHandler:
                 finally:
                     _log.debug(f"消息处理完成，标记任务完成")
                     self.message_queues[group_id].task_done()
+                    # 调用遗忘机制
+                    self.memory_manager.forget_memories()
+                    _log.debug(f"遗忘机制处理完成")
+
 
     @staticmethod
     def is_critical_context_present(context, content):
@@ -221,49 +239,3 @@ class MessageHandler:
             if content in msg['content']:
                 return True
         return False
-
-    async def handle_new_user_registration(self, group_id, user_id, cleaned_content, msg_id):
-        """
-        处理新用户注册，检查用户是否已注册，并提示用户提供昵称
-
-        参数:
-            group_id (str): 群组的唯一标识符
-            user_id (str): 用户的唯一标识符
-            cleaned_content (str): 用户发送的消息内容
-            msg_id (str): 消息的唯一标识符
-        """
-        try:
-            if user_id not in self.client.pending_users:
-                _log.info(f"User {user_id} not registered. Prompting for nickname.")
-                await self.client.api.post_group_message(
-                    group_openid=group_id,
-                    content="请@我，然后回复你的昵称，这将会自动录入我的记忆，方便我永远记得你~",
-                    msg_id=msg_id
-                )
-                self.client.pending_users[user_id] = True
-            else:
-                if cleaned_content.strip():
-                    if await add_new_user(user_id, cleaned_content.strip()):
-                        _log.info(f"New user {user_id} registered with nickname: {cleaned_content.strip()}")
-                        await self.client.api.post_group_message(
-                            group_openid=group_id,
-                            content=f"原来是{cleaned_content}吗 ... 我已经记住你了~",
-                            msg_id=msg_id
-                        )
-                    else:
-                        _log.info(f"User {user_id} nickname already registered.")
-                        await self.client.api.post_group_message(
-                            group_openid=group_id,
-                            content="你的昵称已经录入~",
-                            msg_id=msg_id
-                        )
-                else:
-                    _log.info(f"User {user_id} did not provide a nickname. Prompting again.")
-                    await self.client.api.post_group_message(
-                        group_openid=group_id,
-                        content="请@我，然后回复你的昵称，这将会自动录入我的记忆，方便我永远记得你~",
-                        msg_id=msg_id
-                    )
-                self.client.pending_users.pop(user_id, None)
-        except Exception as e:
-            _log.error(f"Error during new user registration for group {group_id}: {e}", exc_info=True)
