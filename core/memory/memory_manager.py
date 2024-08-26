@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <ByteFreeze>
 Last Edited: 2024/8/22 10:00
 Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_824001)
+Version: 1.2.0 (Beta_826010)
 
 memory_manager.py 包含管理消息历史和记忆存储的主要类和方法，支持MongoDB Full-Text Search+Elasticsearch以及智能记忆管理。
 """
