@@ -4,7 +4,7 @@ AmyAlmond Project - config.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Pre_827001)
+Version: 1.2.0 (Stable_827001)
 
 config.py - 配置文件读取与验证
 """
@@ -93,9 +93,11 @@ if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
         MAX_CONTEXT_TOKENS = 2400
         ELASTICSEARCH_QUERY_TERMS = 16
 
-# 剩余配置
+# 其他配置
 MEMORY_THRESHOLD = 150
 FORGET_THRESHOLD = 5
+
+REQUEST_TIMEOUT= test_config.get("request_timeout", 7)
 
 MONGODB_URI = test_config.get("mongodb_url", "")
 MONGODB_USERNAME = test_config.get("mongodb_username", "")

@@ -4,7 +4,7 @@ AmyAlmond Project - core/bot/memory_utils.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Pre_827001)
+Version: 1.2.0 (Stable_827001)
 
 memory_utils.py - 负责处理记忆相关的功能
 """

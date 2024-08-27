@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Pre_827001)
+Version: 1.2.0 (Stable_827001)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """

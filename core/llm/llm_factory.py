@@ -4,7 +4,7 @@ AmyAlmond Project - core/llm/llm_factory.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Pre_827001)
+Version: 1.2.0 (Stable_827001)
 
 llm_factory.py - LLM 工厂类，用于根据配置文件创建相应的 LLM 客户端。
 """

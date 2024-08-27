@@ -3,6 +3,7 @@ import time
 import httpx
 from core.utils.logger import get_logger
 from core.llm.llm_client import LLMClient
+from config import REQUEST_TIMEOUT
 
 _log = get_logger()
 
@@ -24,14 +25,10 @@ class OpenAIClient(LLMClient):
         self.last_request_time = 0
         self.last_request_content = None
 
-        # 初始最大超时为4秒
-        self.timeout = 4
+        # 从配置文件中读取超时设置，默认为7秒
+        self.timeout = REQUEST_TIMEOUT or 7
 
-        # 如果模型是 Meta-Llama-3.1-8B-Instruct，调整超时为18秒
-        if self.openai_model == "Meta-Llama-3.1-8B-Instruct":
-            self.timeout = 18
-
-    async def get_response(self, context, user_input, system_prompt):
+    async def get_response(self, context, user_input, system_prompt, retries=2):
         """
         根据给定的上下文和用户输入,从 OpenAI 模型获取回复
 
@@ -39,6 +36,7 @@ class OpenAIClient(LLMClient):
             context (list): 对话上下文,包含之前的对话内容
             user_input (str): 用户的输入内容
             system_prompt (str): 系统提示
+            retries (int): 出现错误时的最大重试次数，默认值为2次
 
         返回:
             str: OpenAI 模型生成的回复内容
@@ -78,34 +76,51 @@ class OpenAIClient(LLMClient):
         # 打印一遍全配置
         _log.debug(f"Full configuration: {self.__dict__}")
 
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(self.openai_api_url, headers=headers, json=payload)
-                response.raise_for_status()
-                response_data = response.json()
+        for attempt in range(retries + 1):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    response = await client.post(self.openai_api_url, headers=headers, json=payload)
+                    response.raise_for_status()
+                    response_data = response.json()
 
-            # 记录完整的响应数据
-            _log.debug(f"Response data: {response_data}")
+                # 记录完整的响应数据
+                _log.debug(f"Response data: {response_data}")
 
-            reply = response_data['choices'][0]['message']['content'] if 'choices' in response_data and \
-                                                                         response_data['choices'][0]['message'][
-                                                                             'content'] else None
+                reply = response_data['choices'][0]['message']['content'] if 'choices' in response_data and \
+                                                                             response_data['choices'][0]['message'][
+                                                                                 'content'] else None
 
-            #  更新 last_request_time 和 last_request_content
-            self.last_request_time = time.time()
-            self.last_request_content = user_input
+                # 更新 last_request_time 和 last_request_content
+                self.last_request_time = time.time()
+                self.last_request_content = user_input
 
-            if reply is None:
-                _log.warning(f"OpenAI response is empty for user input: {user_input}.")
-            else:
-                # 记录 OpenAI 的回复内容
-                _log.info(f"OpenAI response: {reply}")
+                if reply is None:
+                    _log.warning(f"OpenAI response is empty for user input: {user_input}.")
+                else:
+                    # 记录 OpenAI 的回复内容
+                    _log.info(f"OpenAI response: {reply}")
 
-            return reply
-        except httpx.HTTPStatusError as e:
-            _log.error(f"Error requesting from OpenAI API: {e}", exc_info=True)
-            return "子网故障,过来楼下检查一下/。"
+                return reply
 
+            except httpx.HTTPStatusError as e:
+                _log.error(f"咦...请求错误了： {e}", exc_info=True)
+                _log.error(f"<BE> 错误内容是： {e.response.text}")
+                if e.response.status_code in {503, 504, 500}:  # 处理常见错误状态码
+                    _log.info(f"请求失败，状态码：{e.response.status_code}。正在尝试重试...({attempt + 1}/{retries})")
+                    if attempt < retries:
+                        await asyncio.sleep(2)  # 等待2秒后重试
+                        continue
+                return f"请求失败，状态码：{e.response.status_code}。请稍后再试。"
+
+            except httpx.RequestError as e:
+                _log.error(f"Request error: {e}", exc_info=True)
+                return "请求超时或网络错误，请稍后再试。"
+
+            except Exception as e:
+                _log.error(f"Unexpected error: {e}", exc_info=True)
+                return "发生未知错误，请联系管理员。"
+
+        return "请求失败，请稍后再试。"
 
     async def test(self):
         """

@@ -4,7 +4,7 @@ AmyAlmond Project - message_handler.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Pre_827001)
+Version: 1.2.0 (Stable_827001)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
@@ -157,7 +157,6 @@ class MessageHandler:
                         continue
 
                     # 处理长记忆的情况
-                    # 仅在回复内容中检测到 <get memory> 标记时处理长记忆
                     if "<get memory>" in reply_content:
                         _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
                         reply_content = await handle_long_term_memory(self.memory_manager, group_id, cleaned_content,

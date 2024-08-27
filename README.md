@@ -6,14 +6,16 @@
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
   [![GitHub Stars](https://img.shields.io/github/stars/shuakami/amyalmond_bot.svg)](https://github.com/shuakami/amyalmond_bot/stargazers)
   [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/shuakami/amyalmond_bot)
-  [![Version](https://img.shields.io/badge/version-1.2.0_(Pre_827001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
+  [![Version](https://img.shields.io/badge/version-1.2.0_(Stable_827001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
 
   [English](README_en.md) | 简体中文
 
  ⭐ 强大的聊天机器人，助力群聊智能化 ⭐
   
-  [功能特性](#功能特性) • [效果图](#先看效果) •  [文档](#文档) • [开发与贡献](#开发与贡献) • [许可证](#许可证)
+  [功能特性](#功能特性) • [效果图](#先看效果) •  [官方文档](#安装部署开发) • [开发与贡献](#开发与贡献) • [许可证](#许可证)
 </div>
+
+
 
 ## 功能特性
 
@@ -30,14 +32,19 @@ AmyAlmond 是一个基于 LLM API 的智能聊天机器人，旨在无缝集成�
 - 🪝  日志、代码注释详细，方便调试和监控。
 
 ## 先看效果？
-![预览图-1](dist/img/QQ_hKn8basp3c.png)
-![预览图-2](dist/img/QQ_yMBfUB61Cf.png)
-![预览图-3](dist/img/QQ_pYuUYL5iDA.png)
+![效果图_对话注册](/dist/background/chat-demo.png)
+![效果图_记忆上下文](/dist/background/chat-memory-demo.png)
 
-### 文档
+## 安装/部署/开发
 
-[点此链接](https://www.notion.so/tiancailuoxiaohei/dfd73a088f7745d39244bbcecbbaf910?v=972fb97796534341aca87a165039a3b1)
 
+<a href="https://www.notion.so/tiancailuoxiaohei/dfd73a088f7745d39244bbcecbbaf910?v=972fb97796534341aca87a165039a3b1">
+    <img src="/dist/background/docs-background.png" alt="文档数据库" />
+</a>
+
+<div align="center">
+点击图片以跳转
+</div>
 
 ## 开发与贡献
 
@@ -110,7 +117,7 @@ q(≧▽≦q) 看了这么久了~ 给我们一个 ⭐️ 呗？
     "
   />
   <img
-    alt="Star History Chart"
+    alt="amyalmond_bot Chart"
     src="https://api.star-history.com/svg?repos=shuakami/amyalmond_bot&type=Date"
   />
 </picture>
