@@ -13,6 +13,7 @@ import asyncio
 
 from botpy.message import GroupMessage
 from botpy.types.message import Reference
+
 from config import MAX_CONTEXT_TOKENS
 from core.bot.memory_utils import process_reply_content, handle_long_term_memory, manage_memory_insertion
 # user_registration.py模块 - <处理新用户注册>
@@ -24,7 +25,7 @@ from core.utils.logger import get_logger
 # user_management.py模块 - <用于用户内容清理、用户名获取、用户注册检查及新增用户处理>
 from core.utils.user_management import clean_content, get_user_name, is_user_registered
 # utils.py模块 - <从回复消息中提取记忆内容>
-from core.utils.utils import calculate_token_count, extract_memory_content
+from core.utils.utils import calculate_token_count
 
 _log = get_logger()
 
@@ -156,9 +157,11 @@ class MessageHandler:
                         continue
 
                     # 处理长记忆的情况
-                    reply_content = await handle_long_term_memory(self.memory_manager, group_id, cleaned_content,
-                                                                  formatted_message, context, self.client)
-
+                    # 仅在回复内容中检测到 <get memory> 标记时处理长记忆
+                    if "<get memory>" in reply_content:
+                        _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
+                        reply_content = await handle_long_term_memory(self.memory_manager, group_id, cleaned_content,
+                                                                      formatted_message, context, self.client)
                     # 提取并存储新记忆内容
                     reply_content = await process_reply_content(self.memory_manager, group_id, message, reply_content)
 

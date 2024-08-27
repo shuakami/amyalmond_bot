@@ -67,19 +67,16 @@ async def handle_long_term_memory(memory_manager, group_id, cleaned_content, for
     返回:
         str: 更新后的回复内容
     """
-    if "<get memory>" in formatted_message:  # 仅在检测到 <get memory> 标记时处理长记忆
-        _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
-        long_term_memory = await memory_manager.retrieve_memory(group_id, cleaned_content)
-        if long_term_memory:
-            user_input_with_memory = f"{formatted_message}\n{long_term_memory['content']}"
-            reply_content = await client.get_gpt_response(context, user_input_with_memory)
-            return reply_content
-        else:
-            _log.warning(f"未能检索到相关的长记忆，继续处理当前对话。")
-            return formatted_message  # 如果未检索到长记忆，返回原始内容
+    _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
+
+    long_term_memory = await memory_manager.retrieve_memory(group_id, cleaned_content)
+    if long_term_memory:
+        user_input_with_memory = f"{formatted_message}\n{long_term_memory['content']}"
+        reply_content = await client.get_gpt_response(context, user_input_with_memory)
+        return reply_content
     else:
-        _log.debug("未检测到 <get memory> 标记，跳过长记忆处理。")
-        return formatted_message  # 如果没有标记，则返回原始内容
+        _log.warning(f"未能检索到相关的长记忆，继续处理当前对话。")
+        return None
 
 async def process_reply_content(memory_manager, group_id, message, reply_content):
     """
