@@ -1,11 +1,11 @@
 """
-AmyAlmond Project - bot_client.py
+AmyAlmond Project - core/bot/bot_client.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
-Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/17 16:00
-Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Developer: Shuakami <3 LuoXiaoHei
+
+Copyright (c) 2024 Amyalmond_bot. All rights reserved.
+Version: 1.2.0 (Stable_827001)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -13,12 +13,11 @@ import asyncio
 import random
 import subprocess
 import sys
-import time
 import watchdog.observers
-import requests
 import botpy
 from botpy.message import GroupMessage
 
+from core.plugins.plugin_manager import PluginManager
 # user_management.py模块 - <用户管理模块化文件>
 from core.utils.user_management import load_user_names
 # utils.py模块 - <工具模块化文件>
@@ -35,6 +34,8 @@ from core.bot.message_handler import MessageHandler
 from core.memory.memory_manager import MemoryManager
 # keep_alive.py模块 - <Keep-Alive机制模块化文件>
 from core.keep_alive import keep_alive
+# llm_client.py模块 - <LLM客户端模块化文件>
+from core.llm.llm_factory import LLMFactory
 
 _log = get_logger()
 
@@ -54,6 +55,16 @@ class MyClient(botpy.Client):
         初始化文件系统观察器以监听配置文件变化
         """
         super().__init__(*args, **kwargs)
+        # 初始化插件管理器
+        self.plugin_manager = PluginManager(self)
+
+        # 初始化 LLM 客户端
+        llm_factory = LLMFactory()
+        self.llm_client = llm_factory.create_llm_client()
+
+        # 加载插件
+        self.plugin_manager.register_plugins()
+
         self.pending_users = {}
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
         self.memory_manager = MemoryManager()
@@ -84,6 +95,25 @@ class MyClient(botpy.Client):
         self.observer.schedule(event_handler, path='.', recursive=False)
         self.observer.start()
 
+        # # 初始化插件系统
+        # self.on_message_handlers = []
+        # self.on_ready_handlers = []
+        # self.plugins = []
+        #
+        # # 初始化 LLM 客户端
+        # llm_factory = LLMFactory()
+        # self.llm_client = llm_factory.create_llm_client()
+
+    async def on_message(self, message: botpy.message):
+        """
+        当收到消息时调用
+
+        Args:
+            message (botpy.Message): 收到的消息对象
+        """
+        # 通过事件总线发布 on_message 事件，让所有订阅的插件处理该消息
+        await self.plugin_manager.event_bus.publish("on_message", message)
+
     def load_system_prompt(self):
         """
         加载机器人SystemPrompt
@@ -104,10 +134,17 @@ class MyClient(botpy.Client):
         """
         _log.info(f"Robot 「{self.robot.name}」 is ready!")
         load_user_names()
+
+        # 加载记忆
+        _log.info("正在加载记忆...")
         await self.memory_manager.load_memory()
+        _log.info("记忆加载完成。")
 
         # 启动 Keep-Alive 任务
         await asyncio.create_task(keep_alive(self.openai_api_url, self.openai_secret))
+
+        # 通知插件准备就绪
+        await self.plugin_manager.on_ready()
 
     async def on_group_at_message_create(self, message: GroupMessage):
         """
@@ -120,76 +157,16 @@ class MyClient(botpy.Client):
 
     async def get_gpt_response(self, context, user_input):
         """
-        根据给定的上下文和用户输入,从 GPT 模型获取回复
-
-        参数:
-            context (list): 对话上下文,包含之前的对话内容
-            user_input (str): 用户的输入内容
-
-        返回:
-            str: GPT 模型生成的回复内容
-
-        异常:
-            requests.exceptions.RequestException: 当请求 OpenAI API 出现问题时引发
+        根据给定的上下文和用户输入,从 LLM 模型获取回复
         """
-        # 检查是否为重复请求
-        if self.last_request_time - self.last_request_time < 0.6 and user_input == self.last_request_content and "<get memory>" not in user_input:
-            _log.warning(f"Duplicate request detected and ignored: {user_input}")
-            return None
-
-        payload = {
-            "model": self.openai_model,
-            "temperature": 0.85,
-            "top_p": 1,
-            "presence_penalty": 1,
-            "max_tokens": 3450,
-            "messages": [
-                            {"role": "system", "content": self.system_prompt}
-                        ] + context + [
-                            {"role": "user", "content": user_input}
-                        ]
-        }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.openai_secret}"
-        }
-
-        # 记录请求的payload
-        _log.debug(f"Request payload: {payload}")
-
-        try:
-            response = requests.post(self.openai_api_url, headers=headers, json=payload)
-            response.raise_for_status()
-            response_data = response.json()
-
-            # 记录完整的响应数据
-            _log.debug(f"Response data: {response_data}")
-
-            reply = response_data['choices'][0]['message']['content'] if 'choices' in response_data and \
-                                                                         response_data['choices'][0]['message'][
-                                                                             'content'] else None
-
-            #  更新 last_request_time 和 last_request_content
-            self.last_request_time = time.time()
-            self.last_request_content = user_input
-
-            if reply is None:
-                _log.warning(f"GPT response is empty for user input: {user_input}.")
-            else:
-                # 记录GPT的回复内容
-                _log.info(f"GPT response: {reply}")
-
-            return reply
-        except requests.exceptions.RequestException as e:
-            _log.error(f"Error requesting from OpenAI API: {e}", exc_info=True)
-            return "子网故障,过来楼下检查一下/。"
+        return await self.llm_client.get_response(context, user_input, self.system_prompt)
 
     async def restart_bot(self, group_id, msg_id):
         """
         重启机器人
 
         参数:
-            group_id (str): 群组ID
+            group_id (str): 羡组ID
             msg_id (str): 消息ID
         """
         await self.api.post_group_message(
@@ -202,10 +179,6 @@ class MyClient(botpy.Client):
 
         self.observer.stop()
         self.observer.join()
-
-        for task in self.message_handler.queue_timer.values():
-            task.cancel()
-        self.message_handler.queue_timer.clear()
 
         _log.info("Restart command received. Restarting bot...")
 
@@ -225,7 +198,6 @@ class MyClient(botpy.Client):
         _log.info("Hot reloading...")
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
         load_user_names()
-        await self.memory_manager.load_memory()
         _log.info("Hot reload completed")
         await self.api.post_group_message(
             group_openid=group_id,

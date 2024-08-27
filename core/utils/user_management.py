@@ -2,10 +2,10 @@
 AmyAlmond Project - core/utils/user_management.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
-Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/17 16:00
-Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.2 (Stable_818005)
+Developer: Shuakami <3 LuoXiaoHei
+
+Copyright (c) 2024 Amyalmond_bot. All rights reserved.
+Version: 1.2.0 (Pre_827001)
 
 user_management.py - 用户管理模块，负责用户名映射的加载和保存
 """

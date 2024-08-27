@@ -1,5 +1,0 @@
-qq-botpy
-watchdog~=4.0.2
-requests~=2.31.0
-pyyaml
-aiohttp~=3.9.5
