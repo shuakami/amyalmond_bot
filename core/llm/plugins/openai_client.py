@@ -24,6 +24,13 @@ class OpenAIClient(LLMClient):
         self.last_request_time = 0
         self.last_request_content = None
 
+        # 初始最大超时为4秒
+        self.timeout = 4
+
+        # 如果模型是 Meta-Llama-3.1-8B-Instruct，调整超时为18秒
+        if self.openai_model == "Meta-Llama-3.1-8B-Instruct":
+            self.timeout = 18
+
     async def get_response(self, context, user_input, system_prompt):
         """
         根据给定的上下文和用户输入,从 OpenAI 模型获取回复
@@ -72,7 +79,7 @@ class OpenAIClient(LLMClient):
         _log.debug(f"Full configuration: {self.__dict__}")
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(self.openai_api_url, headers=headers, json=payload)
                 response.raise_for_status()
                 response_data = response.json()
@@ -117,9 +124,10 @@ class OpenAIClient(LLMClient):
 # 使用方法
 if __name__ == "__main__":
     # 配置 OpenAIClient
-    openai_secret = "hk-x4xh1d1000010138e640592513caf599a394f11c49568645"
-    openai_model = "gpt-4o-mini"
-    openai_api_url = "https://api.openai-hk.com/v1/chat/completions"
+    openai_secret = "sk-s2lDjPP1AdigpPBO53845f5d134a406d96CbE24aEeBe2d36"
+    openai_model = "Meta-Llama-3.1-8B-Instruct"
+    openai_api_url = "https://ngedlktfticp.cloud.sealos.io/v1/chat/completions"
+    # 我可以把我的秘钥公开，因为额度很小，而且是用来测试的。但你一定不要像我一样把秘钥明文写在代码中。
 
     # 创建 OpenAIClient 实例
     client = OpenAIClient(openai_secret=openai_secret, openai_model=openai_model, openai_api_url=openai_api_url)

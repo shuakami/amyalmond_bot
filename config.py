@@ -2,16 +2,17 @@
 AmyAlmond Project - config.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
-Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/19 20:13
-Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_826010)
+Developer: Shuakami <3 LuoXiaoHei
+Copyright (c) 2024 Amyalmond_bot. All rights reserved.
+Version: 1.2.0 (Pre_827001)
 
 config.py - 配置文件读取与验证
 """
 import os
 from botpy.ext.cog_yaml import read
 from core.utils.logger import get_logger
+import subprocess
+import time
 
 # 获取 logger 对象
 logger = get_logger()
@@ -47,19 +48,54 @@ if os.path.exists(CONFIG_FILE):
     if loaded_config:
         test_config.update(loaded_config)
     else:
-        print(f"")
+        print("")
         logger.critical(f"配置文件为空: {CONFIG_FILE}")
         logger.critical(f"请检查配置文件是否正确填写，并确保其格式为 YAML")
         exit(1)
 else:
-    print(f"")
+    print("")
     logger.critical(f"找不到配置文件: {CONFIG_FILE}")
     logger.critical(f"请确保在 {CONFIG_DIR} 目录下存在 config.yaml 文件")
     exit(1)
 
 # 配置参数
-MAX_CONTEXT_TOKENS = 2400
+MAX_CONTEXT_TOKENS = test_config.get("max_context_tokens", None)
+ELASTICSEARCH_QUERY_TERMS = test_config.get("elasticsearch_query_terms", None)
+
+# 检查是否需要自动调优
+if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
+    logger.warning("未找到必要的配置参数，正在调用自动调优程序...")
+    try:
+        start_time = time.time()
+        # 调用 auto_tune.py 自动调优
+        result = subprocess.run(["python", "core/db/auto_tune.py"], timeout=60)
+        elapsed_time = time.time() - start_time
+
+        if result.returncode == 0:
+            logger.info(f"自动调优完成，耗时 {elapsed_time:.2f} 秒")
+            # 重新读取配置文件
+            if os.path.exists(CONFIG_FILE):
+                loaded_config = read(CONFIG_FILE)
+                if loaded_config:
+                    test_config.update(loaded_config)
+                    MAX_CONTEXT_TOKENS = test_config.get("max_context_tokens", 2400)  # 默认值 2400
+                    ELASTICSEARCH_QUERY_TERMS = test_config.get("elasticsearch_query_terms", 16)  # 默认值 16
+                else:
+                    logger.critical("配置文件读取失败，使用默认值")
+                    MAX_CONTEXT_TOKENS = 2400
+                    ELASTICSEARCH_QUERY_TERMS = 8
+        else:
+            logger.error("自动调优程序执行失败，使用默认值")
+            MAX_CONTEXT_TOKENS = 2400
+            ELASTICSEARCH_QUERY_TERMS = 16
+    except subprocess.TimeoutExpired:
+        logger.error("自动调优超时，使用默认值")
+        MAX_CONTEXT_TOKENS = 2400
+        ELASTICSEARCH_QUERY_TERMS = 16
+
+# 剩余配置
 MEMORY_THRESHOLD = 150
+FORGET_THRESHOLD = 5
 
 MONGODB_URI = test_config.get("mongodb_url", "")
 MONGODB_USERNAME = test_config.get("mongodb_username", "")
@@ -72,10 +108,6 @@ ELASTICSEARCH_PASSWORD = test_config.get("elasticsearch_password", "")
 OPENAI_SECRET = test_config.get("openai_secret", "")
 OPENAI_MODEL = test_config.get("openai_model", "gpt-4o-mini")
 OPENAI_API_URL = test_config.get("openai_api_url", "https://api.openai-hk.com/v1/chat/completions")
-
-# TEA_URL = test_config.get("tea_url", "")
-# TEA_SECRET = test_config.get("tea_secret", "")
-# TEA_MODEL = test_config.get("tea_model", "gpt-4o-mini")
 
 ADMIN_ID = test_config.get("admin_id", "")
 

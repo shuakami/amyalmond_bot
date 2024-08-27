@@ -2,22 +2,20 @@
 AmyAlmond Project - message_handler.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
-Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/22 10:00
-Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.2.0 (Beta_826010)
+Developer: Shuakami <3 LuoXiaoHei
+Copyright (c) 2024 Amyalmond_bot. All rights reserved.
+Version: 1.2.0 (Pre_827001)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
 
 import asyncio
-import random
 
 from botpy.message import GroupMessage
 from botpy.types.message import Reference
-
 from config import MAX_CONTEXT_TOKENS
-from core.bot.memory_utils import handle_long_term_memory, process_reply_content
+from core.bot.memory_utils import process_reply_content, handle_long_term_memory, manage_memory_insertion
+# user_registration.py模块 - <处理新用户注册>
 from core.bot.user_registration import handle_new_user_registration
 # elasticsearch_index_manager.py模块 - <用于与Elasticsearch交互>
 from core.db.elasticsearch_index_manager import ElasticsearchIndexManager
@@ -49,7 +47,7 @@ class MessageHandler:
         self.es_manager = ElasticsearchIndexManager()  # 初始化Elasticsearch管理器
         self.message_queues = {}  # 每个群组一个消息队列
         self.locks = {}  # 每个群组一个锁
-        self.processed_messages = set()  # 记录已经处理过的消息ID
+        self.processed_messages: set[int] = set()   # 记录已经处理过的消息ID
         self.queue_loop = asyncio.get_event_loop()  # 创建一个事件循环
 
     async def handle_group_message(self, message: GroupMessage):
@@ -133,7 +131,8 @@ class MessageHandler:
                     formatted_message = f"{user_name}: {cleaned_content}"
                     _log.debug(f"添加消息到历史记录: {formatted_message}")
                     self.memory_manager.add_message_to_history(group_id, {"role": "user", "content": formatted_message})
-
+                    context = await manage_memory_insertion(self.memory_manager, group_id, cleaned_content, context,
+                                                            formatted_message)
                     # 动态消息队列长度调整 - 基于Token计数
                     current_token_count = calculate_token_count(context)
                     _log.debug(f"当前Token计数: {current_token_count}")
@@ -141,17 +140,6 @@ class MessageHandler:
                         context = context[1:]  # 移除最早的一条消息
                         current_token_count = calculate_token_count(context)
                         _log.debug(f"移除最早消息后Token计数: {current_token_count}")
-
-                    # 检查是否需要插入记忆
-                    if not self.is_critical_context_present(context, cleaned_content):
-                        _log.debug("正在检索相关记忆...")
-                        memory_to_insert = await self.memory_manager.retrieve_memory(group_id, cleaned_content)
-                        if memory_to_insert:
-                            _log.debug("找到相关记忆，准备插入上下文...")
-                            if not any(mem['content'] == memory_to_insert['content'] for mem in context):
-                                insert_position = random.randint(0, len(context))
-                                context.insert(insert_position, memory_to_insert)
-                                _log.info(f"记忆插入到上下文位置: {insert_position}")
 
                     # 在获取 LLM 回复之前，发布事件以允许插件进行处理
                     await self.client.plugin_manager.event_bus.publish("before_llm_response", context,
@@ -168,26 +156,11 @@ class MessageHandler:
                         continue
 
                     # 处理长记忆的情况
-                    if "<get memory>" in reply_content:
-                        _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
-                        long_term_memory = await self.memory_manager.retrieve_memory(group_id, cleaned_content)
-                        _log.debug(f"检索到的长记忆: {long_term_memory}")  # 添加日志记录，输出检索到的长记忆内容
-                        if long_term_memory:
-                            user_input_with_memory = f"{formatted_message}\n{long_term_memory['content']}"
-                            reply_content = await self.client.get_gpt_response(context, user_input_with_memory)
-                        else:
-                            _log.warning(f"未能检索到相关的长记忆，继续处理当前对话。")
+                    reply_content = await handle_long_term_memory(self.memory_manager, group_id, cleaned_content,
+                                                                  formatted_message, context, self.client)
 
                     # 提取并存储新记忆内容
-                    if reply_content is not None:
-                        _log.debug("提取新记忆内容...")
-                        memory_content = extract_memory_content(reply_content)
-                        if memory_content:
-                            _log.debug(f"存储新的记忆内容: {memory_content}")
-                            await self.memory_manager.store_memory(group_id, message, "assistant", memory_content)
-
-                            # 清除回复内容中的<memory>标记
-                            reply_content = reply_content.replace(f"<memory>{memory_content}</memory>", "")
+                    reply_content = await process_reply_content(self.memory_manager, group_id, message, reply_content)
 
                     # 生成并发送回复消息，包含消息处理时间
                     reply_message = reply_content or '抱歉，我暂时无法回复你的消息'
@@ -223,9 +196,6 @@ class MessageHandler:
                 finally:
                     _log.debug(f"消息处理完成，标记任务完成")
                     self.message_queues[group_id].task_done()
-                    # 调用遗忘机制
-                    self.memory_manager.forget_memories()
-                    _log.debug(f"遗忘机制处理完成")
 
 
     @staticmethod

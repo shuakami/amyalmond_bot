@@ -2,10 +2,9 @@
 AmyAlmond Project - core/utils/file_handler.py
 
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
-Developer: Shuakami <ByteFreeze>
-Last Edited: 2024/8/17 10:35
-Copyright (c) 2024 ByteFreeze. All rights reserved.
-Version: 1.1.0 (Beta_817001)
+Developer: Shuakami <3 LuoXiaoHei
+Copyright (c) 2024 Amyalmond_bot. All rights reserved.
+Version: 1.2.0 (Pre_827001)
 
 file_handler.py 用于监控系统提示文件的修改，并在文件发生变化时重新加载系统提示
 """
