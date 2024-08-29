@@ -2,12 +2,11 @@
 AmyAlmond Plugins - core/plugins/plugins.py
 Plugins核心模块
 """
-import os
 import importlib
 import inspect
+import os
 import traceback
 
-# from core.bot.bot_client import MyClient
 from core.plugins import Plugin
 from core.utils.logger import get_logger
 
@@ -16,7 +15,6 @@ logger = get_logger()
 
 
 def load_plugins(bot_client):
-    from core.bot.bot_client import MyClient
     """
     加载插件
 
@@ -27,10 +25,12 @@ def load_plugins(bot_client):
     plugins_dir = os.path.join("core", "plugins")
 
     if not os.path.isdir(plugins_dir):
-        logger.error(f"插件目录 '{plugins_dir}' 不存在。")
+        logger.error(f"<ERROR> 插件目录不存在:")
+        logger.error(f"   ↳ 目录路径: '{plugins_dir}'")
         return plugins
 
-    logger.info(f"正在从目录 '{plugins_dir}' 加载插件...")
+    logger.info(f"<AAPL> LOADING >>>>>>")
+    logger.info(f"   ↳ 插件目录: '{plugins_dir}'")
 
     for plugin_folder in os.listdir(plugins_dir):
         plugin_dir = os.path.join(plugins_dir, plugin_folder)
@@ -42,29 +42,39 @@ def load_plugins(bot_client):
             if os.path.exists(plugin_file) and os.path.exists(amy_file):
                 full_module_name = f"core.plugins.{plugin_name}.{plugin_name}"
                 try:
-                    logger.info(f"尝试加载插件: {full_module_name}...")
+                    logger.info(f"<LOAD> 尝试加载插件:")
+                    logger.info(f"   ↳ 插件名称: {full_module_name}")
                     module = importlib.import_module(full_module_name)
 
                     # 输出模块中的所有类，方便调试
-                    logger.debug(
-                        f"模块 {full_module_name} 中的类: {[name for name, obj in inspect.getmembers(module, inspect.isclass)]}")
+                    logger.debug("<DEBUG> 模块中的类信息:")
+                    logger.debug(f"   ↳ 模块: {full_module_name}")
+                    logger.debug(f"   ↳ 类: {[name for name, obj in inspect.getmembers(module, inspect.isclass)]}")
 
                     for name, obj in inspect.getmembers(module):
                         if inspect.isclass(obj) and issubclass(obj, Plugin) and obj != Plugin:
                             try:
                                 plugin = obj(bot_client)
                                 plugins.append(plugin)
-                                logger.info(f"成功加载插件: {name}")
+                                logger.info(f"<PLUGIN> 成功加载插件:")
+                                logger.info(f"   ↳ 类名: {name}")
                             except Exception as e:
-                                logger.error(f"初始化插件 {full_module_name} 时发生错误: {e}")
+                                logger.error(f"<ERROR> 初始化插件时发生错误:")
+                                logger.error(f"   ↳ 插件名称: {full_module_name}")
+                                logger.error(f"   ↳ 错误详情: {e}")
                                 logger.debug(traceback.format_exc())
 
                 except (ImportError, ModuleNotFoundError) as e:
-                    logger.error(f"导入插件 {full_module_name} 失败: {e}")
+                    logger.error(f"<ERROR> 导入插件失败:")
+                    logger.error(f"   ↳ 插件名称: {full_module_name}")
+                    logger.error(f"   ↳ 错误详情: {e}")
                     logger.debug(traceback.format_exc())
                 except Exception as e:
-                    logger.error(f"加载插件 {full_module_name} 时发生错误: {e}")
+                    logger.error(f"<ERROR> 加载插件时发生错误:")
+                    logger.error(f"   ↳ 插件名称: {full_module_name}")
+                    logger.error(f"   ↳ 错误详情: {e}")
                     logger.debug(traceback.format_exc())
 
-    logger.info(f"共加载了 {len(plugins)} 个插件。")
+    logger.info(f"<LOAD> 插件加载完成:")
+    logger.info(f"   ↳ 总插件数量: {len(plugins)}")
     return plugins

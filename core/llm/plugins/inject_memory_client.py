@@ -4,7 +4,7 @@ AmyAlmond Project - core/llm/plugins/inject_memory_client.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.2.3 (Alpha_829001)
 
 inject_memory_client.py - 实现与 LLM 交互的客户端，用于处理记忆提取和注入任务
 """

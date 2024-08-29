@@ -4,7 +4,7 @@ AmyAlmond Project - config.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.2.3 (Alpha_829001)
 
 config.py - 配置文件读取与验证
 """
@@ -43,19 +43,22 @@ FAISS_INDEX_PATH = "./data/faiss_index.bin"
 
 # 读取配置文件
 test_config = {}
+logger.info("")
+logger.info(">>> CONFIG LOADING...")
 if os.path.exists(CONFIG_FILE):
     loaded_config = read(CONFIG_FILE)
     if loaded_config:
         test_config.update(loaded_config)
+        logger.info("   ↳ 配置文件加载成功")
     else:
-        print("")
-        logger.critical(f"配置文件为空: {CONFIG_FILE}")
-        logger.critical(f"请检查配置文件是否正确填写，并确保其格式为 YAML")
+        logger.critical("<ERROR> 配置文件为空")
+        logger.critical(f"   ↳ 路径: {CONFIG_FILE}")
+        logger.critical("   ↳ 请检查配置文件是否正确填写，并确保其格式为 YAML")
         exit(1)
 else:
-    print("")
-    logger.critical(f"找不到配置文件: {CONFIG_FILE}")
-    logger.critical(f"请确保在 {CONFIG_DIR} 目录下存在 config.yaml 文件")
+    logger.critical("<ERROR> 找不到配置文件")
+    logger.critical(f"   ↳ 路径: {CONFIG_FILE}")
+    logger.critical(f"   ↳ 请确保在 {CONFIG_DIR} 目录下存在 config.yaml 文件")
     exit(1)
 
 # 配置参数
@@ -64,7 +67,7 @@ ELASTICSEARCH_QUERY_TERMS = test_config.get("elasticsearch_query_terms", None)
 
 # 检查是否需要自动调优
 if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
-    logger.warning("未找到必要的配置参数，正在调用自动调优程序...")
+    logger.warning("<WARNING> 未找到必要的配置参数，正在调用自动调优程序...")
     try:
         start_time = time.time()
         # 调用 auto_tune.py 自动调优
@@ -72,7 +75,8 @@ if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
         elapsed_time = time.time() - start_time
 
         if result.returncode == 0:
-            logger.info(f"自动调优完成，耗时 {elapsed_time:.2f} 秒")
+            logger.info("<INFO> 自动调优完成")
+            logger.info(f"   ↳ 耗时: {elapsed_time:.2f} 秒")
             # 重新读取配置文件
             if os.path.exists(CONFIG_FILE):
                 loaded_config = read(CONFIG_FILE)
@@ -81,17 +85,18 @@ if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
                     MAX_CONTEXT_TOKENS = test_config.get("max_context_tokens", 2400)  # 默认值 2400
                     ELASTICSEARCH_QUERY_TERMS = test_config.get("elasticsearch_query_terms", 16)  # 默认值 16
                 else:
-                    logger.critical("配置文件读取失败，使用默认值")
+                    logger.critical("<ERROR> 配置文件读取失败，使用默认值")
                     MAX_CONTEXT_TOKENS = 2400
                     ELASTICSEARCH_QUERY_TERMS = 8
         else:
-            logger.error("自动调优程序执行失败，使用默认值")
+            logger.error("<ERROR> 自动调优程序执行失败，使用默认值")
             MAX_CONTEXT_TOKENS = 2400
             ELASTICSEARCH_QUERY_TERMS = 16
     except subprocess.TimeoutExpired:
-        logger.error("自动调优超时，使用默认值")
+        logger.error("<ERROR> 自动调优超时，使用默认值")
         MAX_CONTEXT_TOKENS = 2400
         ELASTICSEARCH_QUERY_TERMS = 16
+
 
 # 其他配置
 MEMORY_THRESHOLD = 150
@@ -123,29 +128,37 @@ DEBUG_MODE = test_config.get("debug", False)
 
 # 验证关键配置
 if not MONGODB_USERNAME:
-    logger.warning("MongoDB 用户名缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> MongoDB 用户名缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not MONGODB_PASSWORD:
-    logger.warning("MongoDB 密码缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> MongoDB 密码缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not MONGODB_URI:
-    logger.warning("MongoDB URI 缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> MongoDB URI 缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not OPENAI_SECRET:
-    logger.warning("OpenAI API 密钥缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> OpenAI API 密钥缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not OPENAI_MODEL:
-    logger.warning("OpenAI 模型缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> OpenAI 模型缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not OPENAI_API_URL:
-    logger.warning("OpenAI API URL 缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> OpenAI API URL 缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 if not ADMIN_ID:
-    logger.warning("管理员 ID 缺失,请检查 config.yaml 文件")
+    logger.warning("<WARNING> 管理员 ID 缺失")
+    logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 
 # DEBUG情况下
 if DEBUG_MODE:
     if OPENAI_SECRET and OPENAI_MODEL and OPENAI_API_URL and ADMIN_ID:
         masked_secret = '*' * (len(OPENAI_SECRET) - 4) + OPENAI_SECRET[-4:]
         masked_admin_id = '*' * (len(ADMIN_ID) - 4) + ADMIN_ID[-4:]
-        print("")
-        logger.debug(f"OpenAI API 密钥: {masked_secret}")
-        logger.debug(f"OpenAI 模型: {OPENAI_MODEL}")
-        logger.debug(f"OpenAI API URL: {OPENAI_API_URL}")
-        logger.debug(f"管理员 ID: {masked_admin_id}")
-    logger.debug(f"日志级别: {LOG_LEVEL}")
-    logger.debug(f"调试模式: 已启用")
+        logger.info("")
+        logger.info("<CONFIG> OpenAI API Configuration")
+        logger.info(f"   ↳ API Key   : {masked_secret}")
+        logger.info(f"   ↳ Model     : {OPENAI_MODEL}")
+        logger.info(f"   ↳ API URL   : {OPENAI_API_URL}")
+        logger.info(f"   ↳ Admin ID  : {masked_admin_id}")
+        logger.info(f"   ↳ Log Level : {LOG_LEVEL}")
+        logger.info(f"   ↳ Debug Mode: {'Enabled' if DEBUG_MODE else 'Disabled'}")

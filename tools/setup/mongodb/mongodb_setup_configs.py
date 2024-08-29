@@ -4,15 +4,6 @@ import sys
 from pathlib import Path
 from pymongo import MongoClient, errors
 
-try:
-    from config import MONGODB_URI, MONGODB_USERNAME, MONGODB_PASSWORD
-    config_exists = True
-except ImportError:
-    config_exists = False
-    MONGODB_URI = "mongodb://localhost:27017/"
-    MONGODB_USERNAME = None
-    MONGODB_PASSWORD = None
-
 # 配置文件路径
 MONGO_CONFIG_PATH = Path(__file__).parent.parent.parent / "configs/mongodb.yaml"
 PROJECT_CONFIG_PATH = Path(__file__).parent.parent.parent.parent / "configs/config.yaml"
@@ -144,14 +135,6 @@ def test_mongo_connection(username, password):
 
 def configure_mongodb():
     try:
-        if config_exists:
-            print("> 检测到现有的 MongoDB 配置，正在测试连接...")
-            if test_mongo_connection(MONGODB_USERNAME, MONGODB_PASSWORD):
-                print("> 现有 MongoDB 配置有效，跳过配置过程。")
-                return
-            else:
-                print("! 现有 MongoDB 配置无效，将进行重新配置。")
-
         # 提示用户输入用户名和密码
         username, password = prompt_user_for_mongo_credentials()
 

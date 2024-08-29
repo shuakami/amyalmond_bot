@@ -1,6 +1,5 @@
 # core/plugins/plugin_manager.py
-import os
-from core.plugins import Plugin
+
 from core.plugins.plugins import load_plugins
 from core.utils.logger import get_logger
 from core.plugins.event_bus import EventBus
@@ -20,8 +19,9 @@ class PluginManager:
         for plugin in self.plugins:
             self.event_bus.subscribe("on_message", plugin.on_message)
             self.event_bus.subscribe("on_ready", plugin.on_ready)
-            self.event_bus.subscribe("before_send_reply", plugin.on_message)  # 添加这行
-            logger.info(f"已注册插件: {plugin.name}")
+            self.event_bus.subscribe("before_send_reply", plugin.on_message)
+            logger.info("<PLUGIN REGISTER> 插件已注册:")
+            logger.info(f"   ↳ 插件名称: {plugin.name}")
 
     async def process_message(self, message, reply_content):
         """

@@ -46,7 +46,8 @@ class OpenAIClient(LLMClient):
         """
         # 检查是否为重复请求
         if time.time() - self.last_request_time < 0.6 and user_input == self.last_request_content and "<get memory>" not in user_input:
-            _log.warning(f"Duplicate request detected and ignored: {user_input}")
+            _log.warning("<DUPLICATE> 检测到重复请求，已忽略:")
+            _log.warning(f"   ↳ 用户输入: {user_input}")
             return None
 
         payload = {
@@ -67,14 +68,10 @@ class OpenAIClient(LLMClient):
             "Authorization": f"Bearer {self.openai_secret}"
         }
 
-        # 记录请求的payload
-        _log.debug(f"Request payload: {payload}")
-
-        # 打印请求头
-        _log.debug(f"Request headers: {headers}")
-
-        # 打印一遍全配置
-        _log.debug(f"Full configuration: {self.__dict__}")
+        # 记录请求的 payload 和 headers
+        _log.debug("<REQUEST> 请求参数:")
+        _log.debug(f"   ↳ Payload: {payload}")
+        _log.debug(f"   ↳ Headers: {headers}")
 
         for attempt in range(retries + 1):
             try:
@@ -84,7 +81,8 @@ class OpenAIClient(LLMClient):
                     response_data = response.json()
 
                 # 记录完整的响应数据
-                _log.debug(f"Response data: {response_data}")
+                _log.debug("<RESPONSE> 完整响应数据:")
+                _log.debug(f"   ↳ {response_data}")
 
                 reply = response_data['choices'][0]['message']['content'] if 'choices' in response_data and \
                                                                              response_data['choices'][0]['message'][
@@ -95,16 +93,20 @@ class OpenAIClient(LLMClient):
                 self.last_request_content = user_input
 
                 if reply is None:
-                    _log.warning(f"OpenAI response is empty for user input: {user_input}.")
+                    _log.warning("<RESPONSE> OpenAI 回复为空:")
+                    _log.warning(f"   ↳ 用户输入: {user_input}")
                 else:
                     # 记录 OpenAI 的回复内容
-                    _log.info(f"OpenAI response: {reply}")
+                    _log.info("<RESPONSE> OpenAI 回复:")
+                    _log.info(f"   ↳ 内容: {reply}")
 
                 return reply
 
             except httpx.HTTPStatusError as e:
-                _log.error(f"咦...请求错误了： {e}", exc_info=True)
-                _log.error(f"<BE> 错误内容是： {e.response.text}")
+                _log.error("<ERROR> 🚨请求错误:")
+                _log.error(f"   ↳ 状态码: {e.response.status_code}")
+                _log.error(f"   ↳ 错误详情: {e}")
+                _log.error(f"   ↳ 返回内容: {e.response.text}")
                 if e.response.status_code in {503, 504, 500}:  # 处理常见错误状态码
                     _log.info(f"请求失败，状态码：{e.response.status_code}。正在尝试重试...({attempt + 1}/{retries})")
                     if attempt < retries:
@@ -113,11 +115,13 @@ class OpenAIClient(LLMClient):
                 return f"请求失败，状态码：{e.response.status_code}。请稍后再试。"
 
             except httpx.RequestError as e:
-                _log.error(f"Request error: {e}", exc_info=True)
+                _log.error("<ERROR> 请求异常:")
+                _log.error(f"   ↳ 错误详情: {e}")
                 return "请求超时或网络错误，请稍后再试。"
 
             except Exception as e:
-                _log.error(f"Unexpected error: {e}", exc_info=True)
+                _log.error("<ERROR> 未知错误:")
+                _log.error(f"   ↳ 错误详情: {e}")
                 return "发生未知错误，请联系管理员。"
 
         return "请求失败，请稍后再试。"

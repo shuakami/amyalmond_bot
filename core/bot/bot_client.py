@@ -5,7 +5,7 @@ Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.2.3 (Alpha_829001)
 
 bot_client.py 包含 AmyAlmond 机器人的主要客户端类，链接其他模块进行处理。
 """
@@ -77,13 +77,18 @@ class MyClient(botpy.Client):
         self.ADMIN_ID = test_config.get("admin_id", "")
 
         if not self.openai_secret:
+            _log.critical("<ERROR> OpenAI API 密钥缺失，请检查 config.yaml 文件")
             raise ValueError("OpenAI API key is missing in config.yaml")
         if not self.openai_model:
+            _log.critical("<ERROR> OpenAI 模型缺失，请检查 config.yaml 文件")
             raise ValueError("OpenAI model is missing in config.yaml")
         if not self.openai_api_url:
+            _log.critical("<ERROR> OpenAI API URL 缺失，请检查 config.yaml 文件")
             raise ValueError("OpenAI API URL is missing in config.yaml")
         if not self.ADMIN_ID:
+            _log.critical("<ERROR> 管理员 ID 缺失，请检查 config.yaml 文件")
             raise ValueError("Admin ID is missing in config.yaml")
+
 
         # 初始化 last_request_time 和 last_request_content
         self.last_request_time = 0
@@ -94,15 +99,6 @@ class MyClient(botpy.Client):
         event_handler = ConfigFileHandler(self)
         self.observer.schedule(event_handler, path='.', recursive=False)
         self.observer.start()
-
-        # # 初始化插件系统
-        # self.on_message_handlers = []
-        # self.on_ready_handlers = []
-        # self.plugins = []
-        #
-        # # 初始化 LLM 客户端
-        # llm_factory = LLMFactory()
-        # self.llm_client = llm_factory.create_llm_client()
 
     async def on_message(self, message: botpy.message):
         """
@@ -119,26 +115,27 @@ class MyClient(botpy.Client):
         加载机器人SystemPrompt
         """
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
-        _log.info(f"SystemPromptStatus: {len(self.system_prompt)}")
+        _log.info(f">>> SYSTEM PROMPT LOADED")
+        _log.info(f"   ↳ Prompt count: {len(self.system_prompt)}")
 
     def reload_system_prompt(self):
         """
         重新加载机器人SystemPrompt
         """
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
-        _log.info("System prompt reloaded")
+        _log.info(">>> SYSTEM PROMPT RELOADED")
 
     async def on_ready(self):
         """
         当机器人准备好时调用
         """
-        _log.info(f"Robot 「{self.robot.name}」 is ready!")
+        _log.info(f">>> ROBOT 「{self.robot.name}」 IS READY!")
         load_user_names()
 
         # 加载记忆
-        _log.info("正在加载记忆...")
+        _log.info(">>> MEMORY LOADING...")
         await self.memory_manager.load_memory()
-        _log.info("记忆加载完成。")
+        _log.info("   ↳ 记忆加载完成")
 
         # 启动 Keep-Alive 任务
         await asyncio.create_task(keep_alive(self.openai_api_url, self.openai_secret))
@@ -175,12 +172,12 @@ class MyClient(botpy.Client):
             msg_id=msg_id
         )
 
-        _log.info("Restarting bot...")
+        _log.info(">>> RESTARTING BOT...")
 
         self.observer.stop()
         self.observer.join()
 
-        _log.info("Restart command received. Restarting bot...")
+        _log.info(">>> BOT RESTART COMMAND RECEIVED, SHUTTING DOWN...")
 
         python = sys.executable
         subprocess.Popen([python] + sys.argv)
@@ -195,12 +192,13 @@ class MyClient(botpy.Client):
             group_id (str): 群组ID
             msg_id (str): 消息ID
         """
-        _log.info("Hot reloading...")
+        _log.info(">>> HOT RELOAD INITIATED...")
         self.system_prompt = load_system_prompt(SYSTEM_PROMPT_FILE)
         load_user_names()
-        _log.info("Hot reload completed")
+        _log.info("   ↳ 热重载完成，系统已更新")
         await self.api.post_group_message(
             group_openid=group_id,
             content="热重载完成，系统已更新。",
             msg_id=msg_id
         )
+
