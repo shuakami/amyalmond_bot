@@ -4,7 +4,7 @@ AmyAlmond Project - message_handler.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.3 (Alpha_829001)
+Version: 1.2.4 (Alpha_902002)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
@@ -13,8 +13,10 @@ import asyncio
 
 from botpy.message import GroupMessage
 from botpy.types.message import Reference
-
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from config import MAX_CONTEXT_TOKENS
+
 from core.bot.memory_utils import process_reply_content, handle_long_term_memory, manage_memory_insertion
 # user_registration.py模块 - <处理新用户注册>
 from core.bot.user_registration import handle_new_user_registration
@@ -26,6 +28,8 @@ from core.utils.logger import get_logger
 from core.utils.user_management import clean_content, get_user_name, is_user_registered
 # utils.py模块 - <从回复消息中提取记忆内容>
 from core.utils.utils import calculate_token_count
+# ace.py模块 - <安全性检查>
+from core.ace.ace import ACE
 
 _log = get_logger()
 
@@ -51,6 +55,9 @@ class MessageHandler:
         self.processed_messages: set[int] = set()   # 记录已经处理过的消息ID
         self.queue_loop = asyncio.get_event_loop()  # 创建一个事件循环
 
+        # 初始化ACE实例
+        self.ace = ACE()
+
     async def handle_group_message(self, message: GroupMessage):
         """
         处理收到的群组消息，分发到相应的消息队列中，并启动消息处理任务
@@ -74,6 +81,16 @@ class MessageHandler:
         _log.info(f"   ↳ 群组: {group_id}")
         _log.info(f"   ↳ 内容: '{cleaned_content}'")
         _log.info("")
+
+        # 进行用户输入验证
+        if not self.ace.validate_user_input(cleaned_content):
+            _log.warning(f"<ACE> 🚫消息违法，已被拒绝: {cleaned_content}")
+            return
+
+        # 检查请求频率
+        if not self.ace.check_request_frequency(user_id):
+            _log.warning(f"<ACE> 🚫{user_name} ({user_id}) 请求过于频繁，消息被拒绝")
+            return
 
         # 添加消息ID到已处理集合中
         self.processed_messages.add(message_id)
@@ -136,12 +153,18 @@ class MessageHandler:
                     _log.debug(f"<COMPRESS> 正在压缩群组 {group_id} 的消息历史...")
                     context = await self.memory_manager.compress_memory(group_id, self.client.get_gpt_response)
 
-                    # 将用户消息添加到历史记录中
-                    formatted_message = f"{user_name}: {cleaned_content}"
-                    _log.debug(f"<HISTORY> 添加消息到历史记录: {formatted_message}")
-                    self.memory_manager.add_message_to_history(group_id, {"role": "user", "content": formatted_message})
-                    context = await manage_memory_insertion(self.memory_manager, group_id, cleaned_content, context,
-                                                            formatted_message)
+                    # 判断消息是否与上下文相似
+                    if self.is_similar_to_context(cleaned_content, context):
+                        _log.info(f"消息与上下文相似，跳过主动记忆调用。")
+                    else:
+                        # 将用户消息添加到历史记录中
+                        formatted_message = f"{user_name}: {cleaned_content}"
+                        _log.debug(f"<HISTORY> 添加消息到历史记录: {formatted_message}")
+                        self.memory_manager.add_message_to_history(group_id,
+                                                                   {"role": "user", "content": formatted_message})
+                        context = await manage_memory_insertion(self.memory_manager, group_id, cleaned_content, context,
+                                                                formatted_message)
+
                     # 动态消息队列长度调整 - 基于Token计数
                     current_token_count = calculate_token_count(context)
                     _log.debug(f"<TOKENS> 当前Token计数: {current_token_count}")
@@ -213,13 +236,31 @@ class MessageHandler:
 
 
     @staticmethod
-    def is_critical_context_present(context, content):
+    def is_similar_to_context(content, context, threshold=0.75):
         """
-        检查上下文中是否包含与当前消息相关的关键信息。
-        如果上下文中已经包含相关信息，则返回 True，否则返回 False。
+        判断当前消息是否与上下文中的消息相似。
+
+        参数:
+            content (str): 当前消息内容
+            context (list): 消息上下文，包含之前的对话内容
+            threshold (float): 相似度阈值，默认0.75
+
+        返回:
+            bool: 如果相似度超过阈值，返回 True，否则返回 False
         """
-        # 根据关键字或语义分析判断是否存在关键上下文信息
-        for msg in context:
-            if content in msg['content']:
-                return True
-        return False
+        if not context:
+            return False
+
+        # 提取上下文中的内容
+        context_contents = [msg['content'] for msg in context if 'content' in msg and msg['content'].strip()]
+        documents = context_contents + [content]
+
+        # 计算TF-IDF向量
+        vectorizer = TfidfVectorizer().fit_transform(documents)
+        vectors = vectorizer.toarray()
+
+        # 计算当前消息与上下文中每条消息的相似度
+        cosine_similarities = cosine_similarity([vectors[-1]], vectors[:-1]).flatten()
+
+        # 如果有任何一条消息的相似度超过阈值，返回True
+        return any(similarity > threshold for similarity in cosine_similarities)

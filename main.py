@@ -4,7 +4,7 @@ AmyAlmond Project - Main.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.3 (Alpha_829001)
+Version: 1.2.4 (Alpha_902002)
 
 Main.py 用于启动 AmyAlmond 机器人，加载配置文件和客户端
 """

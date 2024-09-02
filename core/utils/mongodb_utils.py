@@ -14,6 +14,7 @@ class MongoDBUtils:
             self.db = self.client["amyalmond"]
             self.users_collection = self.db["users"]
             self.conversations_collection = self.db["conversations"]
+            self.temp_memories_collection = self.db["temp_memories"]  # 临时记忆集合
             _log.info("<DB CONNECT> 成功连接到MongoDB:")
             _log.info(f"   ↳ URI: {MONGODB_URI}")
             _log.info(f"   ↳ 数据库: amyalmond")
@@ -21,6 +22,39 @@ class MongoDBUtils:
             _log.error("<DB ERROR> 🚨无法连接到MongoDB服务器:")
             _log.error(f"   ↳ 错误详情: {e}")
             raise
+
+    def insert_temporary_memory(self, memory_document):
+        """
+        插入一份临时记忆到MongoDB的临时集合中
+        """
+        try:
+            result = self.temp_memories_collection.insert_one(memory_document)
+            return result.inserted_id
+        except errors.PyMongoError as e:
+            _log.error(f"插入临时记忆失败: {e}")
+            return None
+
+    def find_temporary_memories(self, group_id):
+        """
+        获取特定群组的所有临时记忆
+        """
+        try:
+            memories = list(self.temp_memories_collection.find({"group_id": group_id}))
+            return memories
+        except errors.PyMongoError as e:
+            _log.error(f"查找临时记忆失败: {e}")
+            return []
+
+    def clear_temporary_memory(self, group_id):
+        """
+        清空特定群组的所有临时记忆
+        """
+        try:
+            result = self.temp_memories_collection.delete_many({"group_id": group_id})
+            return result.deleted_count
+        except errors.PyMongoError as e:
+            _log.error(f"清空临时记忆失败: {e}")
+            return 0
 
     def insert_user(self, user_document):
         """
@@ -226,6 +260,8 @@ class MongoDBUtils:
             _log.error("<DB ERROR> 🚨删除对话文档失败:")
             _log.error(f"   ↳ 错误详情: {e}")
             return None
+
+
 
     def close_connection(self):
         """

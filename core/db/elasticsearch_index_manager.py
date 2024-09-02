@@ -4,7 +4,7 @@ AmyAlmond Project - core/db/elasticsearch_index_manager.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.3 (Alpha_829001)
+Version: 1.2.4 (Alpha_902002)
 
 elasticsearch_index_manager.py - 负责Elasticsearch索引的创建、更新和管理
 """
