@@ -36,10 +36,20 @@ def create_zip_file(version):
     return zip_filename
 
 def get_commit_history(repo, branch='main', limit=10):
-    """获取最近的提交记录。"""
-    commits = repo.get_commits(sha=branch)
-    commit_messages = [commit.commit.message for commit in commits[:limit]]
-    return "\n".join(commit_messages)
+    """获取最近的提交记录和每个提交的具体内容。"""
+    try:
+        commits = repo.get_commits(sha=branch)
+        commit_details = []
+        for commit in commits[:limit]:
+            commit_data = f"Commit: {commit.commit.message}\nAuthor: {commit.commit.author.name}\nDate: {commit.commit.author.date}\n\n"
+            files_changed = commit.files
+            for file in files_changed:
+                commit_data += f"File: {file.filename}\nChanges: {file.patch}\n\n"
+            commit_details.append(commit_data)
+        return "\n".join(commit_details)
+    except Exception as e:
+        print(f"获取提交历史记录时出错: {e}")
+        return "获取提交历史记录失败。"
 
 def create_release(repo, version, zip_filename, prerelease):
     """在 GitHub 上创建 release。"""
@@ -47,7 +57,8 @@ def create_release(repo, version, zip_filename, prerelease):
     release_tag = f"v{version}"
     
     # 生成 release 描述
-    commit_history = get_commit_history(repo)
+    current_branch = os.getenv('GITHUB_REF_NAME', 'main')
+    commit_history = get_commit_history(repo, branch=current_branch)
     description = generate_release_description(version, commit_history)
     
     try:
@@ -65,10 +76,10 @@ def create_release(repo, version, zip_filename, prerelease):
         print(f"创建 Release 时出错: {e}")
 
 def generate_release_description(version, commit_history):
-    """使用 OpenAI API 生成 release 描述，包含提交记录。"""
+    """使用 OpenAI API 生成 release 描述，包含提交记录和内容。"""
     system_prompt = (
-        "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。"
-        "以下是该版本的提交记录：\n"
+        "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。开头部分使用：hi，我是洛小黑。给各位带来amyalmond_bot [版本号]的更新~"
+        "以下是该版本的提交记录和具体更改：\n"
         f"{commit_history}"
     )
     user_content = f"版本 {version} 的更新说明。"
