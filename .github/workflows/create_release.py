@@ -14,13 +14,16 @@ HEADERS = {
 }
 
 def get_version_from_file(file_path):
-    """从指定文件中读取版本号信息。"""
+    """从指定文件中读取版本号信息并转换为tag格式。"""
     with open(file_path, 'r') as file:
         lines = file.readlines()
         version_line = lines[6]  # 第七行
         version_match = re.search(r'Version:\s*(.*)', version_line)
         if version_match:
-            return version_match.group(1).strip()
+            version = version_match.group(1).strip()
+            # 将版本号转换为tag格式
+            tag = 'v' + version.replace(' ', '-').replace('(', '').replace(')', '')
+            return tag
     return None
 
 def create_zip_file(version):
@@ -54,7 +57,15 @@ def get_commit_history(repo, branch='main', limit=10):
 def create_release(repo, version, zip_filename, prerelease):
     """在 GitHub 上创建 release。"""
     release_name = version
-    release_tag = f"v{version}"
+    release_tag = version
+    
+    # 检查 tag 是否重复
+    existing_tags = [tag.name for tag in repo.get_tags()]
+    tag_suffix = 1
+    original_release_tag = release_tag
+    while release_tag in existing_tags:
+        release_tag = f"{original_release_tag}#{tag_suffix}"
+        tag_suffix += 1
     
     # 生成 release 描述
     current_branch = os.getenv('GITHUB_REF_NAME', 'main')
@@ -78,13 +89,13 @@ def create_release(repo, version, zip_filename, prerelease):
 def generate_release_description(version, commit_history):
     """使用 OpenAI API 生成 release 描述，包含提交记录和内容。"""
     system_prompt = (
-        "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。开头部分使用：hi，我是洛小黑。给各位带来amyalmond_bot [版本号]的更新~"
+        "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。开头部分固定使用：hi，我是洛小黑。给各位带来amyalmond_bot [版本号]的自动打包~"
         "以下是该版本的提交记录和具体更改：\n"
         f"{commit_history}"
     )
     user_content = f"版本 {version} 的更新说明。"
     data = {
-        "max_tokens": 500,
+        "max_tokens": 2500,
         "model": "gpt-4o-mini",
         "temperature": 0.8,
         "messages": [
@@ -99,7 +110,7 @@ def generate_release_description(version, commit_history):
     return result['choices'][0]['message']['content']
 
 if __name__ == "__main__":
-    # 获取版本号
+    # 获取版本号并转换为tag格式
     version = get_version_from_file('main.py')
     if version:
         g = Github(GITHUB_TOKEN)
