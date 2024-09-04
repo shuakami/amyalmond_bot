@@ -24,14 +24,22 @@ def get_version_from_file(file_path):
     return None
 
 def create_zip_file(version):
-    """创建包含代码的 zip 文件。"""
+    """创建包含代码的 zip 文件，跳过指定目录。"""
     zip_filename = f"{version}.zip"
-    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk('.'):
+            if '.git' in root or '.github/workflows' in root:
+                continue  # 跳过 .git 和 .github/workflows 目录
             for file in files:
-                if '.git' not in root:  # 跳过 .git 目录
-                    zipf.write(os.path.join(root, file))
+                file_path = os.path.join(root, file)
+                zipf.write(file_path, os.path.relpath(file_path, '.'))
     return zip_filename
+
+def get_commit_history(repo, branch='main', limit=10):
+    """获取最近的提交记录。"""
+    commits = repo.get_commits(sha=branch)
+    commit_messages = [commit.commit.message for commit in commits[:limit]]
+    return "\n".join(commit_messages)
 
 def create_release(repo, version, zip_filename, prerelease):
     """在 GitHub 上创建 release。"""
@@ -39,7 +47,8 @@ def create_release(repo, version, zip_filename, prerelease):
     release_tag = f"v{version}"
     
     # 生成 release 描述
-    description = generate_release_description(version)
+    commit_history = get_commit_history(repo)
+    description = generate_release_description(version, commit_history)
     
     try:
         release = repo.create_git_release(
@@ -55,9 +64,13 @@ def create_release(repo, version, zip_filename, prerelease):
     except Exception as e:
         print(f"创建 Release 时出错: {e}")
 
-def generate_release_description(version):
-    """使用 OpenAI API 生成 release 描述。"""
-    system_prompt = "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。"
+def generate_release_description(version, commit_history):
+    """使用 OpenAI API 生成 release 描述，包含提交记录。"""
+    system_prompt = (
+        "请为以下版本更新生成一个详细的 release 描述，包含更新内容、已知问题和鸣谢部分。"
+        "以下是该版本的提交记录：\n"
+        f"{commit_history}"
+    )
     user_content = f"版本 {version} 的更新说明。"
     data = {
         "max_tokens": 500,
