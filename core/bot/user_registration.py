@@ -1,4 +1,3 @@
-# user_registration.py
 from core.utils.logger import get_logger
 from core.utils.user_management import add_new_user
 
@@ -7,15 +6,16 @@ _log = get_logger()
 async def handle_new_user_registration(client, group_id, user_id, cleaned_content, msg_id):
     """
     处理新用户注册，检查用户是否已注册，并提示用户提供昵称
-
-    参数:
-        client (BotClient): 机器人客户端实例
-        group_id (str): 群组的唯一标识符
-        user_id (str): 用户的唯一标识符
-        cleaned_content (str): 用户发送的消息内容
-        msg_id (str): 消息的唯一标识符
     """
     try:
+        # 插件处理部分
+        if client.plugin_manager:
+            plugin_response = await client.plugin_manager.handle_event("on_registration", group_id=group_id, user_id=user_id, cleaned_content=cleaned_content, msg_id=msg_id)
+            if plugin_response:
+                _log.info(f"插件已处理注册逻辑，跳过默认处理")  # 添加日志以确认插件已处理事件
+                return  # 如果插件处理成功，结束函数
+
+        # 默认处理逻辑
         if user_id not in client.pending_users:
             _log.info("<REGISTRATION> 检测到未注册用户:")
             _log.info(f"   ↳ 用户ID: {user_id}")

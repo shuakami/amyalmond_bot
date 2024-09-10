@@ -114,14 +114,28 @@ class OpenAIClient(LLMClient):
                         continue
                 return f"请求失败，状态码：{e.response.status_code}。请稍后再试。"
 
+
             except httpx.RequestError as e:
                 _log.error("<ERROR> 请求异常:")
                 _log.error(f"   ↳ 错误详情: {e}")
+                _log.error(f"   ↳ 错误类型: {type(e)}")
+                if attempt < retries:
+                    _log.info(f"请求异常，正在尝试重试...({attempt + 1}/{retries})")
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
                 return "请求超时或网络错误，请稍后再试。"
 
+
             except Exception as e:
+
                 _log.error("<ERROR> 未知错误:")
                 _log.error(f"   ↳ 错误详情: {e}")
+                _log.error(f"   ↳ 错误类型: {type(e)}")
+                if attempt < retries:
+                    _log.info(f"发生未知错误，正在尝试重试...({attempt + 1}/{retries})")
+                    await asyncio.sleep(2)  # 等待2秒后重试
+                    continue
+
                 return "发生未知错误，请联系管理员。"
 
         return "请求失败，请稍后再试。"

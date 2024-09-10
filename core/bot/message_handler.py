@@ -4,7 +4,7 @@ AmyAlmond Project - message_handler.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.4 (Alpha_902002)
+Version: 1.3.0 (Alpha_908012)
 
 message_handler.py 负责处理群组消息，包括动态消息队列管理、智能记忆注入、与Elasticsearch集成等功能。
 """
@@ -95,6 +95,18 @@ class MessageHandler:
         # 添加消息ID到已处理集合中
         self.processed_messages.add(message_id)
 
+        # 触发插件的 before_message_queue 事件
+        plugin_result = await self.client.plugin_manager.event_bus.publish(
+            "before_llm_message",
+            message=message,
+            reply_message=cleaned_content
+        )
+
+        # 如果某个插件要求停止继续处理，直接返回插件的回复
+        if plugin_result is False:
+            _log.info(f"插件已处理消息，跳过消息队列。")
+            return
+
         # 清理过期的消息ID以避免集合过大
         if len(self.processed_messages) > 1000:
             _log.debug("<CLEANUP> 清理过期的消息ID...")
@@ -126,25 +138,13 @@ class MessageHandler:
                     _log.debug(f"   ↳ 用户: {user_name} ({message.author.member_openid})")
                     _log.debug(f"   ↳ 内容: '{cleaned_content}'")
 
-                    # 处理管理员指令
-                    if message.author.member_openid == self.client.ADMIN_ID:
-                        if cleaned_content.strip().lower() == "restart":
-                            _log.info("<ADMIN> 收到管理员restart命令:")
-                            _log.info("   ↳ 重启机器人")
-                            await self.client.restart_bot(group_id, message.id)
-                            continue
-                        elif cleaned_content.strip().lower() == "reload":
-                            _log.info("<ADMIN> 收到管理员reload命令:")
-                            _log.info("   ↳ 重新加载配置")
-                            await self.client.hot_reload(group_id, message.id)
-                            continue
-
                     # 处理新用户注册
                     if not is_user_registered(message.author.member_openid):
                         _log.info(f"<REGISTER> 用户 {message.author.member_openid} 尚未注册，正在处理注册...")
                         await handle_new_user_registration(self.client, group_id, message.author.member_openid,
                                                            cleaned_content, message.id)
                         continue
+
 
                     # 在处理消息之前，通过事件总线触发插件逻辑
                     await self.client.plugin_manager.event_bus.publish("before_message_process", message,
@@ -153,12 +153,14 @@ class MessageHandler:
                     _log.debug(f"<COMPRESS> 正在压缩群组 {group_id} 的消息历史...")
                     context = await self.memory_manager.compress_memory(group_id, self.client.get_gpt_response)
 
+                    # 初始化 formatted_message 变量
+                    formatted_message = f"{user_name}: {cleaned_content}"
+
                     # 判断消息是否与上下文相似
                     if self.is_similar_to_context(cleaned_content, context):
                         _log.info(f"消息与上下文相似，跳过主动记忆调用。")
                     else:
                         # 将用户消息添加到历史记录中
-                        formatted_message = f"{user_name}: {cleaned_content}"
                         _log.debug(f"<HISTORY> 添加消息到历史记录: {formatted_message}")
                         self.memory_manager.add_message_to_history(group_id,
                                                                    {"role": "user", "content": formatted_message})
@@ -182,10 +184,10 @@ class MessageHandler:
                     _log.debug("<LLM> 正在获取LLM回复...")
                     reply_content = await self.client.get_gpt_response(context, formatted_message)
 
-                    # 如果获取 LLM 回复失败，则跳过当前消息的处理
+                    # 如果获取 LLM 回复失败，则使用原始消息作为回复内容
                     if reply_content is None:
-                        _log.warning("   ↳ 未能获取LLM回复，跳过此消息的处理")
-                        continue
+                        _log.warning("   ↳ 未能获取LLM回复，使用原始消息作为回复内容")
+                        reply_content = cleaned_content
 
                     # 处理长记忆的情况
                     if "<get memory>" in reply_content:
@@ -202,8 +204,12 @@ class MessageHandler:
                     _log.debug(f"<PLUGIN> 插件处理前的消息: {reply_message}")
 
                     # 使用事件总线调用插件处理回复消息
-                    plugin_result = await self.client.plugin_manager.event_bus.publish("before_send_reply", message,
-                                                                                       reply_message)
+                    plugin_result = await self.client.plugin_manager.event_bus.publish(
+                        "before_send_reply",
+                        message=message,
+                        reply_message=reply_message
+                    )
+
                     if plugin_result is not None:
                         reply_message = plugin_result
 
@@ -233,7 +239,6 @@ class MessageHandler:
                 finally:
                     _log.debug("<COMPLETE> 消息处理完成，标记任务完成")
                     self.message_queues[group_id].task_done()
-
 
     @staticmethod
     def is_similar_to_context(content, context, threshold=0.75):

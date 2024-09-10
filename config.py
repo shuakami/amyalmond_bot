@@ -4,7 +4,7 @@ AmyAlmond Project - config.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.4 (Alpha_902002)
+Version: 1.3.0 (Alpha_908012)
 
 config.py - 配置文件读取与验证
 """
@@ -13,6 +13,7 @@ from botpy.ext.cog_yaml import read
 from core.utils.logger import get_logger
 import subprocess
 import time
+from ruamel.yaml import YAML
 
 # 获取 logger 对象
 logger = get_logger()
@@ -98,10 +99,17 @@ if MAX_CONTEXT_TOKENS is None or ELASTICSEARCH_QUERY_TERMS is None:
         ELASTICSEARCH_QUERY_TERMS = 16
 
 
+
 # 其他配置
+REQUEST_LIMIT_TIME_FRAME = test_config.get("request_limit_time_frame", 10)
+REQUEST_LIMIT_COUNT = test_config.get("request_limit_count", 7)
+GLOBAL_RATE_LIMIT = test_config.get("global_rate_limit", 75)
+
 MEMORY_THRESHOLD = 150
 FORGET_THRESHOLD = 5
 
+
+MEMORY_BATCH_SIZE = test_config.get("memory_batch_size", 1)
 REQUEST_TIMEOUT= test_config.get("request_timeout", 7)
 
 MONGODB_URI = test_config.get("mongodb_url", "")
@@ -149,6 +157,58 @@ if not ADMIN_ID:
     logger.warning("<WARNING> 管理员 ID 缺失")
     logger.warning(f"   ↳ 请检查配置文件: {CONFIG_FILE}")
 
+def _write_config():
+    """将配置写入 config.yaml 文件，保留原始格式"""
+    yaml = YAML()
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    yaml.preserve_quotes = True
+
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        yaml_data = yaml.load(f)
+
+    # 更新配置项的值
+    for key, value in test_config.items():
+        if key in yaml_data:
+            yaml_data[key] = value
+        else:
+            yaml_data[key] = value
+
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        yaml.dump(yaml_data, f)
+
+def get_all_config():
+    """获取所有配置"""
+    return test_config
+
+def add_config(key, value):
+    """添加新的配置项"""
+    if key in test_config:
+        logger.warning(f"<WARNING> 配置项 '{key}' 已存在，无法添加")
+        return False
+    test_config[key] = value
+    _write_config()
+    logger.info(f"<INFO> 配置项 '{key}' 添加成功")
+    return True
+
+def update_config(key, value):
+    """修改或添加配置项"""
+    test_config[key] = value  # 如果 key 不存在，则添加新的配置项
+    _write_config()
+    logger.info(f"<INFO> 配置项 '{key}' 修改成功")
+    return True
+
+def delete_config(key):
+    """删除配置项"""
+    if key not in test_config:
+        logger.warning(f"<WARNING> 配置项 '{key}' 不存在，无法删除")
+        return False
+    del test_config[key]
+    _write_config()
+    logger.info(f"<INFO> 配置项 '{key}' 删除成功")
+    return True
+
+
+
 # DEBUG情况下
 if DEBUG_MODE:
     if OPENAI_SECRET and OPENAI_MODEL and OPENAI_API_URL and ADMIN_ID:
@@ -162,3 +222,4 @@ if DEBUG_MODE:
         logger.info(f"   ↳ Admin ID  : {masked_admin_id}")
         logger.info(f"   ↳ Log Level : {LOG_LEVEL}")
         logger.info(f"   ↳ Debug Mode: {'Enabled' if DEBUG_MODE else 'Disabled'}")
+

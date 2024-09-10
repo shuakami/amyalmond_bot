@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+from bson import ObjectId
 from pymongo import MongoClient, errors
 from config import MONGODB_URI, MONGODB_USERNAME, MONGODB_PASSWORD
 from core.utils.logger import get_logger
@@ -10,24 +13,69 @@ class MongoDBUtils:
         初始化MongoDBUtils实例，连接到指定的MongoDB数据库和集合
         """
         try:
-            self.client = MongoClient(MONGODB_URI, username=MONGODB_USERNAME, password=MONGODB_PASSWORD)
+            # 修改URI，增加authSource参数
+            updated_uri = f"{MONGODB_URI}?authSource=admin"
+            self.client = MongoClient(updated_uri, username=MONGODB_USERNAME, password=MONGODB_PASSWORD)
             self.db = self.client["amyalmond"]
             self.users_collection = self.db["users"]
             self.conversations_collection = self.db["conversations"]
             self.temp_memories_collection = self.db["temp_memories"]  # 临时记忆集合
             _log.info("<DB CONNECT> 成功连接到MongoDB:")
-            _log.info(f"   ↳ URI: {MONGODB_URI}")
+            _log.info(f"   ↳ URI: {updated_uri}")
             _log.info(f"   ↳ 数据库: amyalmond")
         except errors.ConnectionFailure as e:
             _log.error("<DB ERROR> 🚨无法连接到MongoDB服务器:")
             _log.error(f"   ↳ 错误详情: {e}")
             raise
 
-    def insert_temporary_memory(self, memory_document):
+    def get_all_database_names(self):
         """
-        插入一份临时记忆到MongoDB的临时集合中
+        获取MongoDB服务器上的所有数据库名称
+
+        返回:
+            list: 数据库名称列表
         """
         try:
+            db_names = self.client.list_database_names()
+            _log.info("<DB INFO> 获取所有数据库名称成功:")
+            _log.info(f"   ↳ 数据库列表: {db_names}")
+            return db_names
+        except errors.PyMongoError as e:
+            _log.error("<DB ERROR> 🚨获取数据库名称列表失败:")
+            _log.error(f"   ↳ 错误详情: {e}")
+            return []
+
+    def get_all_collection_names(self, db_name):
+        """
+        获取指定数据库中的所有集合名称
+
+        参数:
+            db_name (str): 数据库名称
+
+        返回:
+            list: 集合名称列表
+        """
+        try:
+            db = self.client[db_name]
+            collection_names = db.list_collection_names()
+            _log.info(f"<DB INFO> 获取数据库 '{db_name}' 中的所有集合名称成功:")
+            _log.info(f"   ↳ 集合列表: {collection_names}")
+            return collection_names
+        except errors.PyMongoError as e:
+            _log.error(f"<DB ERROR> 🚨获取数据库 '{db_name}' 中的集合名称列表失败:")
+            _log.error(f"   ↳ 错误详情: {e}")
+            return []
+
+    def insert_temporary_memory(self, memory_document):
+        """
+        插入一份临时记忆到MongoDB的临时集合中，自动添加时间戳和ID
+        """
+        try:
+            # 如果没有_id，MongoDB会自动生成
+            memory_document["_id"] = memory_document.get("_id", ObjectId())
+            # 如果没有时间戳，使用当前时间
+            memory_document["timestamp"] = memory_document.get("timestamp", datetime.now(timezone.utc))
+
             result = self.temp_memories_collection.insert_one(memory_document)
             return result.inserted_id
         except errors.PyMongoError as e:
@@ -58,14 +106,12 @@ class MongoDBUtils:
 
     def insert_user(self, user_document):
         """
-        插入一份用户文档到MongoDB的用户集合中
-
-        参数:
-            user_document (dict): 要插入的用户文档
-        返回:
-            插入文档的_id
+        插入一份用户文档到MongoDB的用户集合中，自动添加时间戳和ID
         """
         try:
+            user_document["_id"] = user_document.get("_id", ObjectId())
+            user_document["timestamp"] = user_document.get("timestamp", datetime.now(timezone.utc))
+
             result = self.users_collection.insert_one(user_document)
             _log.info("<DB INSERT> 插入用户文档成功:")
             _log.info(f"   ↳ _id: {result.inserted_id}")
@@ -180,14 +226,12 @@ class MongoDBUtils:
 
     def insert_conversation(self, conversation_document):
         """
-        插入一份对话文档到MongoDB的对话集合中
-
-        参数:
-            conversation_document (dict): 要插入的对话文档
-        返回:
-            插入文档的_id
+        插入一份对话文档到MongoDB的对话集合中，自动添加时间戳和ID
         """
         try:
+            conversation_document["_id"] = conversation_document.get("_id", ObjectId())
+            conversation_document["timestamp"] = conversation_document.get("timestamp", datetime.now(timezone.utc))
+
             result = self.conversations_collection.insert_one(conversation_document)
             _log.info("<DB INSERT> 插入对话文档成功:")
             _log.info(f"   ↳ _id: {result.inserted_id}")

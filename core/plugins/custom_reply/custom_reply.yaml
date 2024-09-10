@@ -1,0 +1,6 @@
+plugin_name: "Custom Reply"
+version: "1.0.0"
+author: "天才洛小黑"
+description: "可以在消息后加上随机自定义回复 ~"
+dependencies:
+  - name: "random"

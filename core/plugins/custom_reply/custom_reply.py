@@ -24,7 +24,11 @@ class CustomReplyPlugin(Plugin):
 
             if self.custom_replies:
                 custom_reply = random.choice(self.custom_replies)
-                reply_message = f"{reply_message}\n---\n{custom_reply}"
+                if reply_message:
+                    reply_message = f"{reply_message}\n---\n{custom_reply}"
+                else:
+                    reply_message = custom_reply
+
                 logger.info("<REPLY ADDED> 添加自定义回复:")
                 logger.info(f"   ↳ 内容: {custom_reply}")
             else:

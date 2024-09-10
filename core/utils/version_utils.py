@@ -4,7 +4,7 @@ AmyAlmond Project - core/utils/version_utils.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.4 (Alpha_902002)
+Version: 1.3.0 (Alpha_908012)
 
 version_utils.py 包含用于解析和比较版本号的工具函数。
 """

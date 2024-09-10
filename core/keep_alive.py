@@ -4,23 +4,25 @@ AmyAlmond Project - core/keep_alive.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.4 (Alpha_902002)
+Version: 1.3.0 (Alpha_908012)
 
 keep_alive.py 包含 Keep-Alive 机制的实现,用于监控 API 的连接状态。
 """
 
 import asyncio
+
 import aiohttp
-from core.utils.logger import get_logger
-from core.utils.version_utils import is_newer_version
+
 from config import OPENAI_SECRET, OPENAI_API_URL, OPENAI_KEEP_ALIVE, UPDATE_KEEP_ALIVE
+from core.update_manager import handle_updates
+from core.utils.logger import get_logger
 
 _log = get_logger()
 
-CURRENT_VERSION = "1.2.4 (Alpha_902002)"
+
 GITHUB_REPO = "shuakami/amyalmond_bot"
 
-PRIMARY_API_URL = "https://api.amyalmond.mrsunny.top/api/github-status"
+PRIMARY_API_URL = "https://bot.luoxiaohei.cn/api/github-status"
 FALLBACK_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 
@@ -78,39 +80,8 @@ async def check_for_updates():
     if not UPDATE_KEEP_ALIVE:
         _log.warning("更新检查已关闭，建议打开以获取最新功能和修复~")
         return
-
-    version_info_list = await get_latest_version()
-
-    if version_info_list:
-        stable_version = None
-        dev_version = None
-
-        for version_info in version_info_list:
-            version_str = version_info.get("latestVersion")
-            release_type = version_info.get("type", "Stable")
-
-            if release_type == "Stable" and (not stable_version or is_newer_version(stable_version, version_str)[0]):
-                stable_version = version_str
-            elif release_type != "Stable" and (not dev_version or is_newer_version(dev_version, version_str)[0]):
-                dev_version = version_str
-
-        if stable_version:
-            needs_update, message = is_newer_version(CURRENT_VERSION, stable_version)
-            if needs_update:
-                _log.info(f"<UPDATE> 新正式版可用: {stable_version}. 当前版本: {CURRENT_VERSION}. 请立即更新。")
-            else:
-                _log.info(f"<INFO> 当前版本: {CURRENT_VERSION}，最新稳定版: {stable_version}，{message}")
-
-        if dev_version:
-            needs_update, message = is_newer_version(CURRENT_VERSION, dev_version)
-            if needs_update:
-                _log.info(
-                    f"<UPDATE> 新开发版可用: {dev_version}. 当前版本: {CURRENT_VERSION}. 如果您是开发者，考虑尝试更新。")
-            else:
-                _log.info(f"<INFO> 当前版本: {CURRENT_VERSION}，最新开发版: {dev_version}，{message}")
-
-    else:
-        _log.warning("<WARN> 无法检查更新")
+    # 调用更新管理器
+    await handle_updates()
 
 
 async def keep_alive(api_url=OPENAI_API_URL, api_key=OPENAI_SECRET):

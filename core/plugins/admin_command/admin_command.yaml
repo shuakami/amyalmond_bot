@@ -1,0 +1,5 @@
+plugin_name: "Admin Command"
+version: "1.0.0"
+author: "天才洛小黑"
+priority: 10
+description: "兼容并执行管理员命令"
