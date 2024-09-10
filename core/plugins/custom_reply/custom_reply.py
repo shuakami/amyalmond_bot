@@ -14,7 +14,7 @@ class CustomReplyPlugin(Plugin):
         if not self.custom_replies:
             logger.error("Failed to load custom replies. Plugin will not function correctly.")
 
-    async def on_message(self, message, reply_message):
+    async def on_message(self, message=None, reply_message=None, **kwargs):
         try:
             logger.debug(f"CustomReplyPlugin called with reply_message: {reply_message}")
             if self.custom_replies:
