@@ -1,9 +1,7 @@
-import random
 import sys
 import os
 import subprocess
-import time
-import keyboard
+
 
 from game import play_game
 

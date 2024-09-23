@@ -4,7 +4,7 @@ AmyAlmond Project - core/utils/version_utils.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.3.0 (Stable_923001)
 
 version_utils.py 包含用于解析和比较版本号的工具函数。
 """
@@ -12,7 +12,7 @@ version_utils.py 包含用于解析和比较版本号的工具函数。
 import re
 from typing import Dict, Optional, Tuple
 
-VERSION_PATTERN = r'^v?(\d+)\.(\d+)\.(\d+)(?:[-_ ]?([a-zA-Z]+)[-_ ]?(\d+)?)?(?:\s*\([a-zA-Z]+[-_ ]?\d+\))?$'
+VERSION_PATTERN = r'^v?(\d+)\.(\d+)\.(\d+)(?:[-_ ]?([a-zA-Z]+)[-_ ]?(\d+))?(?:\s*\(([a-zA-Z]+)[-_ ]?(\d+)\))?$'
 
 
 def parse_version(version: str) -> Optional[Dict[str, any]]:
@@ -29,52 +29,37 @@ def parse_version(version: str) -> Optional[Dict[str, any]]:
     if not match:
         return None
 
-    major, minor, patch, pre_release_label, pre_release_num = match.groups()
+    major, minor, patch, pre_release_label, pre_release_num, stability, build_num = match.groups()
 
     return {
         "major": int(major),
         "minor": int(minor),
         "patch": int(patch),
-        "pre_release_label": pre_release_label.lower() if pre_release_label else None,
-        "pre_release_num": int(pre_release_num) if pre_release_num else None
+        "stability": stability.lower() if stability else (pre_release_label.lower() if pre_release_label else "stable"),
+        "build_num": int(build_num or pre_release_num or 0)
     }
 
 
-def compare_pre_release(a: Optional[str], a_num: Optional[int],
-                        b: Optional[str], b_num: Optional[int]) -> int:
+def compare_stability(a: str, b: str) -> int:
     """
-    比较两个预发布版本。
+    比较两个稳定性标签。
 
     参数:
-        a, b (Optional[str]): 预发布标签
-        a_num, b_num (Optional[int]): 预发布版本号
+        a, b (str): 稳定性标签
 
     返回:
         int: 如果 a > b 返回 1，如果 a < b 返回 -1，如果 a == b 返回 0
     """
-    pre_release_order = {'alpha': 0, 'beta': 1, 'rc': 2}
+    stability_order = {'alpha': 0, 'beta': 1, 'pre': 2, 'stable': 3}
+    a_order = stability_order.get(a, -1)
+    b_order = stability_order.get(b, -1)
 
-    if a is None and b is None:
-        return 0
-    if a is None:
-        return 1  # 正式版本大于预发布版本
-    if b is None:
-        return -1  # 预发布版本小于正式版本
-
-    a_order = pre_release_order.get(a, -1)
-    b_order = pre_release_order.get(b, -1)
-
-    if a_order != b_order:
-        return 1 if a_order > b_order else -1
-
-    if a_num is None and b_num is None:
-        return 0
-    if a_num is None:
-        return -1
-    if b_num is None:
+    if a_order > b_order:
         return 1
-
-    return 1 if a_num > b_num else (-1 if a_num < b_num else 0)
+    elif a_order < b_order:
+        return -1
+    else:
+        return 0
 
 
 def compare_versions(v1: Dict[str, any], v2: Dict[str, any]) -> int:
@@ -93,8 +78,16 @@ def compare_versions(v1: Dict[str, any], v2: Dict[str, any]) -> int:
         if v1[key] < v2[key]:
             return -1
 
-    return compare_pre_release(v1['pre_release_label'], v1['pre_release_num'],
-                               v2['pre_release_label'], v2['pre_release_num'])
+    stability_comparison = compare_stability(v1['stability'], v2['stability'])
+    if stability_comparison != 0:
+        return stability_comparison
+
+    if v1['build_num'] > v2['build_num']:
+        return 1
+    elif v1['build_num'] < v2['build_num']:
+        return -1
+    else:
+        return 0
 
 
 def is_newer_version(current: str, latest: str) -> Tuple[bool, str]:
@@ -117,14 +110,16 @@ def is_newer_version(current: str, latest: str) -> Tuple[bool, str]:
     comparison = compare_versions(latest_parsed, current_parsed)
 
     if comparison > 0:
-        return True, f"新版本可用: {latest}"
+        update_type = "强烈建议" if latest_parsed['stability'] in ['stable', 'pre'] else "建议"
+        return True, f"{update_type}更新: 新版本 {latest} 可用"
     elif comparison < 0:
         return False, f"当前版本 {current} 已经是最新"
     else:
-        # 版本号相同，但可能预发布标签不同
-        if current_parsed['pre_release_label'] and not latest_parsed['pre_release_label']:
-            return True, f"新正式版本可用: {latest}"
-        elif not current_parsed['pre_release_label'] and latest_parsed['pre_release_label']:
-            return False, f"当前版本 {current} 是正式版，无需更新到预发布版 {latest}"
+        stability_comparison = compare_stability(latest_parsed['stability'], current_parsed['stability'])
+        if stability_comparison > 0:
+            update_type = "强烈建议" if latest_parsed['stability'] in ['stable', 'pre'] else "建议"
+            return True, f"{update_type}更新: 新的稳定版本 {latest} 可用"
+        elif stability_comparison < 0:
+            return False, f"当前版本 {current} 比服务器版本 {latest} 更稳定，无需更新"
         else:
-            return False, "版本相同，无需更新"
+            return False, "已是最新，无需更新"

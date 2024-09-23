@@ -1,0 +1,5 @@
+plugin_name: "Add Hi"
+version: "1.0.0"
+author: "天才洛小黑"
+priority: 0
+description: "在所有回复后加hi"

@@ -4,7 +4,7 @@ AmyAlmond Project - core/bot/memory_utils.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.3.0 (Stable_923001)
 
 memory_utils.py - 负责处理记忆相关的功能
 """
@@ -30,14 +30,27 @@ async def manage_memory_insertion(memory_manager, group_id, cleaned_content, con
     memory_to_insert = await memory_manager.retrieve_memory(group_id, cleaned_content)
     if memory_to_insert:
         memory_content = memory_to_insert['content']
-        # 检查是否已经插入相同的记忆内容
-        if not any(memory_content in msg['content'] for msg in context):
-            memory_insertion = f"{user_message}\n---\n<在数据库查找到的你的长期记忆，请谨慎使用：{memory_content}>"
+        memory_insertion = f"{user_message}\n---\n<在数据库查找到的你的长期记忆，请谨慎使用：{memory_content}>"
+
+        # 查找最后一个用户消息的位置，将记忆插入到其后
+        inserted = False
+        for i in range(len(context) - 1, -1, -1):
+            if context[i]['role'] == 'user' and context[i]['content'] == user_message:
+                context.insert(i + 1, {"role": "user", "content": memory_insertion})
+                inserted = True
+                _log.info(">>> 记忆已插入到用户消息之后")
+                break
+
+        # 如果没有找到匹配的用户消息，默认追加到上下文末尾
+        if not inserted:
             context.append({"role": "user", "content": memory_insertion})
-            _log.info("记忆已插入到用户消息之后")
-        else:
-            _log.info("跳过插入重复记忆")
+            _log.info(">>> 未找到匹配的用户消息，记忆已追加到上下文末尾")
+
+    else:
+        _log.info(">>> 没有找到需要插入的记忆内容")
+
     return context
+
 
 
 
@@ -67,7 +80,7 @@ async def handle_long_term_memory(memory_manager, group_id, cleaned_content, for
     返回:
         str: 更新后的回复内容
     """
-    _log.debug("检测到 <get memory> 标记，正在检索长记忆...")
+    _log.debug(">>> 检测到 <get memory> 标记，正在检索长记忆...")
 
     long_term_memory = await memory_manager.retrieve_memory(group_id, cleaned_content)
     if long_term_memory:
@@ -75,7 +88,7 @@ async def handle_long_term_memory(memory_manager, group_id, cleaned_content, for
         reply_content = await client.get_gpt_response(context, user_input_with_memory)
         return reply_content
     else:
-        _log.warning(f"未能检索到相关的长记忆，继续处理当前对话。")
+        _log.warning(">>> 未能检索到相关的长记忆，继续处理当前对话。")
         return None
 
 async def process_reply_content(memory_manager, group_id, message, reply_content):
@@ -91,10 +104,10 @@ async def process_reply_content(memory_manager, group_id, message, reply_content
     返回:
         str: 更新后的回复内容
     """
-    _log.debug("提取新记忆内容...")
+    _log.debug(">>> 提取新记忆内容...")
     memory_content = extract_memory_content(reply_content)
     if memory_content:
-        _log.debug(f"存储新的记忆内容: {memory_content}")
+        _log.debug(f">>> 存储新的记忆内容: {memory_content}")
         await memory_manager.store_memory(group_id, message, "assistant", memory_content)
 
         # 清除回复内容中的<memory>标记

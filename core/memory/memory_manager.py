@@ -4,7 +4,7 @@ AmyAlmond Project - core/memory/memory_manager.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.3.0 (Stable_923001)
 
 memory_manager.py 包含管理消息历史和记忆存储的主要类和方法，支持MongoDB Full-Text Search+Elasticsearch以及智能记忆管理。
 """
@@ -15,11 +15,12 @@ from collections import deque
 from core.llm.plugins.inject_memory_client import InjectMemoryClient
 from core.db.elasticsearch_index_manager import ElasticsearchIndexManager
 from core.utils.mongodb_utils import MongoDBUtils
-from config import MAX_CONTEXT_TOKENS, MEMORY_THRESHOLD, OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL, ELASTICSEARCH_QUERY_TERMS
+from config import MAX_CONTEXT_TOKENS, OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL, ELASTICSEARCH_QUERY_TERMS, MEMORY_BATCH_SIZE
 from core.utils.logger import get_logger
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from core.llm.plugins.openai_client import OpenAIClient
+from core.memory.memory_optimizer import MemoryOptimizer
 
 _log = get_logger()
 
@@ -38,6 +39,7 @@ class MemoryManager:
         self.es_manager = ElasticsearchIndexManager()  # 初始化Elasticsearch管理器
         self.inject_client = InjectMemoryClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)  # 初始化注入记忆的LLM客户端
         self.openai_client = OpenAIClient(OPENAI_SECRET, OPENAI_MODEL, OPENAI_API_URL)
+        self.memory_optimizer = MemoryOptimizer(self.openai_client)  # 初始化记忆优化器
 
     def add_message_to_history(self, group_id, message):
         """
@@ -97,42 +99,48 @@ class MemoryManager:
         return compressed_history
 
     async def store_memory(self, group_id, message, role, content):
-        """
-        智能存储消息到数据库，根据内容决定存储到MongoDB还是Elasticsearch。
-
-        参数:
-            group_id (str): 群组的唯一标识符
-            message (GroupMessage): 包含角色和内容的消息对象，允许为None
-            role (str): 角色，可能是 'user' 或 'assistant'
-            content (str): 消息内容
-        """
         try:
             _log.debug(f"正在存储消息: group_id={group_id}, role={role}, content={content}")
+            _log.debug(f"阈值: {MEMORY_BATCH_SIZE}")
 
             if content is None:
-                _log.warning(f">>>>遇到了一个空内容的消息: group_id={group_id}, role={role}")
-                _log.warning(f">>>>请检查您的api或模型！")
-                return  # 如果内容为空，则不存储
+                _log.warning(f"遇到了一个空内容的消息: group_id={group_id}, role={role}")
+                return
 
-            # 短消息存储到MongoDB，长消息和摘要存储到Elasticsearch
-            if len(content) <= MEMORY_THRESHOLD:
-                # 存储到MongoDB
-                self.mongo.insert_conversation({
-                    "group_id": group_id,
-                    "role": role,
-                    "content": content
-                })
-                _log.info(f"消息已存储到MongoDB, group_id: {group_id}, role: {role}, content: {content}")
-            else:
-                # 存储到Elasticsearch
+            # 将消息先存储到MongoDB的临时集合中
+            self.mongo.insert_temporary_memory({
+                "group_id": group_id,
+                "role": role,
+                "content": content
+            })
+
+            # 获取所有临时存储的记忆
+            temp_memories = self.mongo.find_temporary_memories(group_id)
+            _log.debug(f"当前暂存消息数: {len(temp_memories)}，阈值: {MEMORY_BATCH_SIZE}")
+
+            # 如果消息数量达到阈值，进行记忆优化
+            if len(temp_memories) >= MEMORY_BATCH_SIZE:
+                _log.info(f"达到内存优化阈值，正在进行优化...")
+
+                all_contents = [mem['content'] for mem in temp_memories]
+                optimized_content = await self.memory_optimizer.optimize_memory(all_contents)
+
+                # 存储优化后的内容到Elasticsearch
                 self.es_manager.bulk_insert(index_name="messages", data=[{
                     "group_id": group_id,
-                    "role": role,
-                    "content": content
+                    "role": "assistant",
+                    "content": optimized_content
                 }])
-                _log.info(f"消息已存储到Elasticsearch, group_id: {group_id}, role: {role}, content: {content}")
+
+                # 清空MongoDB的临时集合
+                self.mongo.clear_temporary_memory(group_id)
+
+                _log.info(f"> 优化后的消息已存储到Elasticsearch, group_id: {group_id}, content: {optimized_content}")
+            else:
+                _log.info(f"> 消息已存储到MongoDB临时集合, group_id: {group_id}, role: {role}, content: {content}")
+
         except Exception as e:
-            _log.error(f"存储消息到数据库时发生错误: {e}", exc_info=True)
+            _log.error(f"> 存储消息到数据库时发生错误: {e}", exc_info=True)
 
     async def load_memory(self):
         try:
@@ -182,34 +190,21 @@ class MemoryManager:
 
     async def retrieve_memory(self, group_id, query):
         try:
-            # 首先使用本地分词进行高级搜索
             keywords = self.extract_keywords(query)
             _log.debug(f"提取的关键词: {keywords}")
 
             advanced_results = await self.advanced_search(group_id, " ".join(keywords))
             if not advanced_results:
-                # 如果本地分词的高级搜索无结果，尝试使用LLM进行分词和高级搜索
-                _log.info("高级搜索无结果，尝试使用LLM分词")
-                semantic_keywords = await self.semantic_analysis(query)
-                _log.debug(f"语义分析关键词: {semantic_keywords}")
-                advanced_results = await self.advanced_search(group_id, " ".join(semantic_keywords))
-
-            if advanced_results:
-                sorted_results = self.sort_results_by_relevance(query, advanced_results)
-                _log.info(f"排序后的搜索结果: {sorted_results}")
-                return {"role": "system", "content": f"相关记忆: {sorted_results[0]['content']}"}
-
-            # 如果所有高级搜索都无结果，作为最后手段，尝试基础搜索
-            _log.info("高级搜索无结果，尝试基础搜索")
-            basic_results = await self.basic_search(group_id, keywords)
-            if basic_results:
+                _log.info("高级搜索无结果，尝试基础搜索")
+                basic_results = await self.basic_search(group_id, keywords)
+                if not basic_results:
+                    _log.info("基础搜索也无结果，不追加记忆")
+                    return None  # 不追加记忆
                 sorted_results = self.sort_results_by_relevance(query, basic_results)
-                _log.info(f"排序后的基础搜索结果: {sorted_results}")
                 return {"role": "system", "content": f"相关记忆: {sorted_results[0]['content']}"}
-            else:
-                _log.info("未找到相关记忆")
-                return None
 
+            sorted_results = self.sort_results_by_relevance(query, advanced_results)
+            return {"role": "system", "content": f"相关记忆: {sorted_results[0]['content']}"}
         except Exception as e:
             _log.error(f"检索记忆时发生错误: {e}", exc_info=True)
             return None
@@ -239,14 +234,36 @@ class MemoryManager:
         return keywords
 
     async def basic_search(self, group_id, keywords):
+        """
+        使用MongoDB进行基本搜索，基于关键词进行匹配。
+
+        参数:
+            group_id (str): 群组的唯一标识符
+            keywords (list): 要搜索的关键词列表
+
+        返回:
+            list: 匹配的对话记录
+        """
+        # 使用正则表达式构建查询模式，每个关键词以非贪婪模式进行匹配
+        keyword_patterns = "|".join([f"(?=.*{keyword})" for keyword in keywords])
         query = {
             "group_id": group_id,
-            "content": {"$regex": "|".join(keywords)}
+            "content": {"$regex": keyword_patterns, "$options": "i"}  # 忽略大小写
         }
+
         _log.debug(f"MongoDB查询: {query}")
+
+        # 查找符合条件的对话记录
         results = self.mongo.find_conversations(query)
-        _log.debug(f"MongoDB搜索结果: {results}")
-        return results
+
+        # 过滤搜索结果，只保留包含所有关键词的记录
+        filtered_results = [
+            result for result in results
+            if all(keyword in result['content'] for keyword in keywords)
+        ]
+
+        _log.debug(f"MongoDB搜索结果: {filtered_results}")
+        return filtered_results
 
     async def semantic_analysis(self, query):
         """使用LLM进行语义分析,提取关键概念"""

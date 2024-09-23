@@ -47,7 +47,8 @@ def extract_memory_content(message: object) -> Optional[str]:
             return match.group(1).strip()
     except (TypeError, ValueError, UnicodeDecodeError, AttributeError) as e:
         # 捕获可能出现的任何类型错误
-        _log.warning(f"Warning: Could not extract memory content due to: {e}. Input was: {message}")
+        _log.warning(f"<WARN> 🚨无法提取记忆内容: {e}")
+        _log.debug(f"   ↳ 输入内容: {message}")
     return None
 
 
@@ -121,10 +122,10 @@ def detect_os_and_version() -> Tuple[Optional[str], Optional[str]]:
         elif os_name == "Darwin":
             os_version = platform.mac_ver()[0]  # 获取macOS版本
         else:
-            _log.warning(f"Warning: Unrecognized operating system: {os_name}")
+            _log.warning(f"<WARN> 未识别的操作系统: {os_name}")
 
         return os_name, os_version
 
     except Exception as e:
-        _log.error(f"Error: Failed to detect OS and version due to: {e}")
+        _log.error(f"<ERROR> 检测操作系统和版本时出错: {e}")
         return None, None

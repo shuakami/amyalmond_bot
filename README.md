@@ -6,7 +6,7 @@
   [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
   [![GitHub Stars](https://img.shields.io/github/stars/shuakami/amyalmond_bot.svg)](https://github.com/shuakami/amyalmond_bot/stargazers)
   [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/shuakami/amyalmond_bot)
-  [![Version](https://img.shields.io/badge/version-1.2.0_(Stable_827001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
+  [![Version](https://img.shields.io/badge/version-1.3.0_(Stable_923001)-yellow.svg)](https://github.com/shuakami/amyalmond_bot/releases)
 
   [English](README_en.md) | 简体中文
 
@@ -15,7 +15,7 @@
   [功能特性](#功能特性) • [效果图](#先看效果) •  [官方文档](#安装部署开发) • [开发与贡献](#开发与贡献) • [许可证](#许可证)
 </div>
 
-
+> ⚠️此版本为抢先体验版。如追求稳定请使用 1.2.0_(Stable_827001)
 
 ## 功能特性
 
