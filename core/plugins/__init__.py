@@ -20,15 +20,30 @@ class Plugin:
         self.bot_client = bot_client
         self.name = name if name else self.__class__.__name__
 
-    async def on_message(self, message, reply_content):
+    async def on_message(self, message=None, reply_message=None, **kwargs):
         """
         当收到消息时调用的方法
 
         参数:
             message (Message): 收到的消息对象
-            reply_content (str): 待处理的回复内容
+            reply_message (str): 待处理的回复内容
+            **kwargs: 其他可能的参数
         """
-        return reply_content
+        return reply_message
+
+    async def before_llm_message(self, message=None, reply_message=None, **kwargs):
+        """
+        在 LLM 处理消息之前调用的方法
+
+        参数:
+            message (Message): 收到的消息对象
+            reply_message (str): 待处理的回复内容
+            **kwargs: 其他可能的参数
+
+        返回:
+            bool: True 表示继续处理，False 表示插件已处理
+        """
+        return True
 
     async def on_ready(self):
         """

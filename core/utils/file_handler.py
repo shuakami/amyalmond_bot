@@ -4,7 +4,7 @@ AmyAlmond Project - core/utils/file_handler.py
 Open Source Repository: https://github.com/shuakami/amyalmond_bot
 Developer: Shuakami <3 LuoXiaoHei
 Copyright (c) 2024 Amyalmond_bot. All rights reserved.
-Version: 1.2.0 (Stable_827001)
+Version: 1.3.0 (Stable_923001)
 
 file_handler.py 用于监控系统提示文件的修改，并在文件发生变化时重新加载系统提示
 """
@@ -36,4 +36,6 @@ class ConfigFileHandler(watchdog.events.FileSystemEventHandler):
         """
         if event.src_path.endswith(SYSTEM_PROMPT_FILE):
             self.client.reload_system_prompt()
-            _log.info("System prompt reloaded due to file modification")
+            _log.info("<FILE MODIFIED> 系统提示文件已修改:")
+            _log.info(f"   ↳ 文件路径: {event.src_path}")
+            _log.info("    ↳ 操作: 已重新加载")
