@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="9aa1d404-8f68-4133-b067-a2ae1a82a394" name="更改" comment="背景图忘记放了，补一下 ヾ(^▽^*)))" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;shuakami&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/shuakami/amyalmond_bot.git&quot;,
+    &quot;accountId&quot;: &quot;d941c301-caf6-4448-9c7f-a86b9568da98&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="2mSJLM2RNCaWyNJeFKfxKUnoMqk" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "C:/Users/Administrator/PycharmProjects/AmyAlmond/[Git]",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\Administrator\PycharmProjects\AmyAlmond\[Git]" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-7c0b70fcd90d-JavaScript-PY-242.21829.153" />
+        <option value="bundled-python-sdk-464836ebc622-b74155a9e76b-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.21829.153" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="9aa1d404-8f68-4133-b067-a2ae1a82a394" name="更改" comment="" />
+      <created>1727063987284</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1727063987284</updated>
+      <workItem from="1727063988322" duration="400000" />
+      <workItem from="1727064483624" duration="771000" />
+    </task>
+    <task id="LOCAL-00001" summary="稳定版更新 Version 1.3.0 (Stable_923001)&#10;&#10;---&#10;&#10;## 功能增强&#10;- 插件系统：扩展插件接口以支持自定义消息处理和准备状态检查。&#10;- 配置管理：新增配置项并优化配置文件的读写操作。&#10;- 自动化工作流：实现自动分配Issue、标签和打包发布功能。&#10;- 支持了API：您可以在https://bot.luoxiaohei.cn管理您的机器人（本地）&#10;&#10;### 修复&#10;- 修复了CustomReplyPlugin中的日志和消息处理问题。&#10;- 解决了配置文件读取失败时程序异常退出的问题。### 工作流脚本调整&#10;- 删除了自动分配Issue、标签和打包发布工作流的YAML配置。&#10;&#10;### 其他&#10;- 日志和错误处理信息优化，提高可读性和调试效率。&#10;- 热重载和重启机制的日志输出调整，使状态跟踪更加清晰。&#10;- 各种代码清理和风格统一，包括缩进和空行的调整。">
+      <option name="closed" value="true" />
+      <created>1727064360801</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1727064360801</updated>
+    </task>
+    <task id="LOCAL-00002" summary="稳定版更新 Version 1.3.0 (Stable_923001)&#10;&#10;---&#10;&#10;## 功能增强&#10;- 插件系统：扩展插件接口以支持自定义消息处理和准备状态检查。&#10;- 配置管理：新增配置项并优化配置文件的读写操作。&#10;- 自动化工作流：实现自动分配Issue、标签和打包发布功能。&#10;- 支持了API：您可以在https://bot.luoxiaohei.cn管理您的机器人（本地）&#10;&#10;### 修复&#10;- 修复了CustomReplyPlugin中的日志和消息处理问题。&#10;- 解决了配置文件读取失败时程序异常退出的问题。### 工作流脚本调整&#10;- 删除了自动分配Issue、标签和打包发布工作流的YAML配置。&#10;&#10;### 其他&#10;- 日志和错误处理信息优化，提高可读性和调试效率。&#10;- 热重载和重启机制的日志输出调整，使状态跟踪更加清晰。&#10;- 各种代码清理和风格统一，包括缩进和空行的调整。">
+      <option name="closed" value="true" />
+      <created>1727064672958</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1727064672958</updated>
+    </task>
+    <task id="LOCAL-00003" summary="背景图忘记放了，补一下 ヾ(^▽^*)))">
+      <option name="closed" value="true" />
+      <created>1727064750333</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1727064750333</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="稳定版更新 Version 1.3.0 (Stable_923001)&#10;&#10;---&#10;&#10;## 功能增强&#10;- 插件系统：扩展插件接口以支持自定义消息处理和准备状态检查。&#10;- 配置管理：新增配置项并优化配置文件的读写操作。&#10;- 自动化工作流：实现自动分配Issue、标签和打包发布功能。&#10;- 支持了API：您可以在https://bot.luoxiaohei.cn管理您的机器人（本地）&#10;&#10;### 修复&#10;- 修复了CustomReplyPlugin中的日志和消息处理问题。&#10;- 解决了配置文件读取失败时程序异常退出的问题。### 工作流脚本调整&#10;- 删除了自动分配Issue、标签和打包发布工作流的YAML配置。&#10;&#10;### 其他&#10;- 日志和错误处理信息优化，提高可读性和调试效率。&#10;- 热重载和重启机制的日志输出调整，使状态跟踪更加清晰。&#10;- 各种代码清理和风格统一，包括缩进和空行的调整。" />
+    <MESSAGE value="背景图忘记放了，补一下 ヾ(^▽^*)))" />
+    <option name="LAST_COMMIT_MESSAGE" value="背景图忘记放了，补一下 ヾ(^▽^*)))" />
+  </component>
+</project>

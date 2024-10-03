@@ -12,6 +12,7 @@ Main.py 用于启动 AmyAlmond 机器人，加载配置文件和客户端
 import asyncio
 import subprocess
 import sys
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,44 +34,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # 注册 API 路由
 app.include_router(api_router)
-
 
 async def check_port_occupied(port):
     """
     异步检查指定端口是否被占用。
     """
     try:
-        netstat_command = ["netstat", "-ano", "|", "findstr", f"{port}"]
+        netstat_command = ["netstat", "-an"]
         proc = await asyncio.create_subprocess_exec(
             *netstat_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         output, _ = await proc.communicate()
-        return len(output.strip()) > 0
+        return str(port) in output.decode()
     except Exception as e:
         logger.error(f"检查端口 {port} 时出错: {e}")
         return True
-
 
 async def kill_process_by_port(port):
     """
     异步结束占用指定端口的进程。
     """
     try:
-        netstat_command = ["netstat", "-ano", "|", "findstr", f"{port}"]
+        netstat_command = ["netstat", "-an"]
         proc = await asyncio.create_subprocess_exec(
             *netstat_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         output, _ = await proc.communicate()
-        pid = int(output.split()[-1])
-
-        taskkill_command = ["taskkill", "/F", "/PID", str(pid)]
-        await asyncio.create_subprocess_exec(*taskkill_command)
-        logger.info(f"已结束占用端口 {port} 的进程 (PID: {pid})")
+        for line in output.decode().splitlines():
+            if f":{port}" in line and "LISTEN" in line:
+                pid = int(line.split()[-1])
+                taskkill_command = ["kill", "-9", str(pid)]
+                await asyncio.create_subprocess_exec(*taskkill_command)
+                logger.info(f"已结束占用端口 {port} 的进程 (PID: {pid})")
+                return
     except Exception as e:
         logger.error(f"结束端口 {port} 的进程时出错: {e}")
-
 
 async def start_uvicorn():
     """
@@ -99,7 +100,6 @@ async def start_uvicorn():
 
     logger.error(f"尝试启动 Uvicorn 服务器失败，端口 {port} 一直被占用。")
 
-
 def run_bot():
     """
     运行机器人客户端，保留同步逻辑
@@ -125,7 +125,6 @@ def run_bot():
         logger.error(f"<ERROR> 在 run_bot 中捕获到未处理的异常: {e}", exc_info=True)
         handle_critical_error(sys.exc_info())
 
-
 async def main():
     print("")
     print("     _                       _    _                           _ ")
@@ -141,11 +140,11 @@ async def main():
     # 并行启动 Uvicorn 服务器和机器人客户端
     uvicorn_task = asyncio.create_task(start_uvicorn())
 
-    # 运行机器人客户端（保留同步代码）
+    # 运行机器人客户端（同步）
     bot_task = asyncio.to_thread(run_bot)
 
     await asyncio.gather(uvicorn_task, bot_task)
 
-
 if __name__ == "__main__":
+    # 在主线程中创建事件循环
     asyncio.run(main())
